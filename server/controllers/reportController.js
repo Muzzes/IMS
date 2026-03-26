@@ -33,7 +33,6 @@ const reportController = {
         }
       });
     } catch (error) {
-      console.error('Dashboard stats error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -52,7 +51,6 @@ const reportController = {
       );
       res.json({ chartData: rows.reverse() });
     } catch (error) {
-      console.error('Sales chart error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -76,7 +74,6 @@ const reportController = {
       );
       res.json({ products: rows });
     } catch (error) {
-      console.error('Top products error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -94,7 +91,23 @@ const reportController = {
       );
       res.json({ comparison: rows });
     } catch (error) {
-      console.error('Workspace comparison error:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+
+  getRawMaterialsDashboard: async (req, res) => {
+    try {
+      let wsFilter = "category = 'Raw Material'";
+      const params = [];
+      if (req.workspaceId) {
+        wsFilter += ' AND workspace_id = ?';
+        params.push(req.workspaceId);
+      }
+      const [rows] = await pool.query(
+        `SELECT name, stock_quantity FROM products WHERE ${wsFilter} ORDER BY stock_quantity DESC LIMIT 10`, params
+      );
+      res.json({ chartData: rows });
+    } catch (error) {
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

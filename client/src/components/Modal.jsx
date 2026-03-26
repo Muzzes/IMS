@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { HiXMark } from 'react-icons/hi2';
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -10,6 +11,18 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     }
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
+
+  // Close modal on ESC key
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, handleKeyDown]);
 
   if (!isOpen) return null;
 
@@ -22,14 +35,17 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative ${sizes[size]} w-full bg-white dark:bg-surface-800
-                       rounded-2xl shadow-2xl animate-scaleIn max-h-[90vh] flex flex-col`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200 dark:border-surface-700">
-          <h3 className="text-lg font-bold text-surface-900 dark:text-white">{title}</h3>
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ backgroundColor: 'rgba(11, 15, 26, 0.60)' }} onClick={onClose} />
+      <div className={`relative ${sizes[size]} w-full animate-scaleIn flex flex-col`}
+           style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)', maxHeight: '90vh' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-faint)' }}>
+          <h3 className="font-medium" style={{ color: 'var(--text-primary)', fontSize: '16px' }}>{title}</h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition"
+            className="p-1.5 rounded-lg transition"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-subtle)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
             id="modal-close-btn"
           >
             <HiXMark className="w-5 h-5" />

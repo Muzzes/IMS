@@ -3,10 +3,12 @@ const User = require('../models/User');
 const userController = {
   getAll: async (req, res) => {
     try {
-      const result = await User.getAll({ page: req.query.page, limit: req.query.limit });
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 20;
+      const result = await User.getAll({ page, limit });
       res.json(result);
     } catch (error) {
-      console.error('Get users error:', error);
+      console.error('User getAll error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -17,7 +19,6 @@ const userController = {
       if (!user) return res.status(404).json({ message: 'User not found.' });
       res.json({ user });
     } catch (error) {
-      console.error('Get user error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -28,7 +29,6 @@ const userController = {
       if (!user) return res.status(404).json({ message: 'User not found.' });
       res.json({ message: 'User updated.', user });
     } catch (error) {
-      console.error('Update user error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -39,7 +39,6 @@ const userController = {
       if (!deleted) return res.status(404).json({ message: 'User not found.' });
       res.json({ message: 'User deleted.' });
     } catch (error) {
-      console.error('Delete user error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

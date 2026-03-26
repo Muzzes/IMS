@@ -10,7 +10,6 @@ const notificationController = {
       const unreadCount = await Notification.getUnreadCount(req.user.id, req.workspaceId);
       res.json({ notifications, unreadCount });
     } catch (error) {
-      console.error('Get notifications error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -20,7 +19,6 @@ const notificationController = {
       await Notification.markRead(req.params.id, req.user.id);
       res.json({ message: 'Notification marked as read.' });
     } catch (error) {
-      console.error('Mark read error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -30,7 +28,6 @@ const notificationController = {
       await Notification.markAllRead(req.user.id, req.workspaceId);
       res.json({ message: 'All notifications marked as read.' });
     } catch (error) {
-      console.error('Mark all read error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

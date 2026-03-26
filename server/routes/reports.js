@@ -9,9 +9,10 @@ const router = express.Router();
 router.use(auth);
 router.use(workspaceScope);
 
-router.get('/dashboard',            reportController.getDashboardStats);
-router.get('/sales-chart',          reportController.getSalesChart);
-router.get('/top-products',         reportController.getTopProducts);
+router.get('/dashboard',                  reportController.getDashboardStats);
+router.get('/dashboard/raw-materials',    reportController.getRawMaterialsDashboard);
+router.get('/sales-chart',                reportController.getSalesChart);
+router.get('/top-products',               reportController.getTopProducts);
 router.get('/workspace-comparison', authorize('admin'), reportController.getWorkspaceComparison);
 
 module.exports = router;

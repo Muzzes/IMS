@@ -61,7 +61,7 @@ export default function PurchaseList() {
     )}
   ];
 
-  const filteredData = data.filter(po => po.id.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredData = data.filter(po => po.id?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <PageWrapper

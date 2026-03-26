@@ -28,16 +28,16 @@ export const WorkspaceProvider = ({ children }) => {
       setWorkspaces(data.workspaces);
 
       // Restore active workspace from localStorage or use first
-      const savedId = localStorage.getItem('activeWorkspace');
+      const savedId = localStorage.getItem('ims_active_workspace');
       const saved = data.workspaces.find(w => w.id === parseInt(savedId));
       const initial = saved || data.workspaces[0] || null;
 
       setActiveWorkspace(initial);
       if (initial) {
-        localStorage.setItem('activeWorkspace', initial.id);
+        localStorage.setItem('ims_active_workspace', initial.id);
       }
-    } catch (err) {
-      console.error('Failed to fetch workspaces:', err);
+    } catch {
+      // Silently fail — auth interceptor handles 401
     } finally {
       setLoading(false);
     }
@@ -51,15 +51,21 @@ export const WorkspaceProvider = ({ children }) => {
     if (id === null) {
       // Admin: "All workspaces" mode
       setActiveWorkspace(null);
-      localStorage.removeItem('activeWorkspace');
+      localStorage.removeItem('ims_active_workspace');
       return;
     }
+    // Validate the workspace is in the user's assigned list before switching
     const ws = workspaces.find(w => w.id === id);
-    if (ws) {
-      setActiveWorkspace(ws);
-      localStorage.setItem('activeWorkspace', ws.id);
-    }
+    if (!ws) return; // Silently block unauthorized workspace access
+    setActiveWorkspace(ws);
+    localStorage.setItem('ims_active_workspace', ws.id);
   };
+
+  const resetWorkspace = useCallback(() => {
+    setWorkspaces([]);
+    setActiveWorkspace(null);
+    localStorage.removeItem('ims_active_workspace');
+  }, []);
 
   return (
     <WorkspaceContext.Provider value={{
@@ -67,7 +73,8 @@ export const WorkspaceProvider = ({ children }) => {
       activeWorkspace,
       switchWorkspace,
       loading,
-      refreshWorkspaces: fetchWorkspaces
+      refreshWorkspaces: fetchWorkspaces,
+      resetWorkspace
     }}>
       {children}
     </WorkspaceContext.Provider>

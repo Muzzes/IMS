@@ -8,13 +8,20 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const rateLimit = require('express-rate-limit');
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 auth requests per `window`
+  message: { message: 'Too many requests, please try again later.' }
+});
+
 // Routes
-app.use('/api/auth',          require('./routes/auth'));
+app.use('/api/auth',          authLimiter, require('./routes/auth'));
 app.use('/api/users',         require('./routes/users'));
 app.use('/api/workspaces',    require('./routes/workspaces'));
 app.use('/api/products',      require('./routes/products'));

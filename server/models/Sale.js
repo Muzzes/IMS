@@ -50,35 +50,41 @@ class Sale {
     try {
       await conn.beginTransaction();
 
-      // Check stock availability
+      let calculatedTotal = 0;
+      const verifiedItems = [];
+
+      // Check stock availability with row lock FOR UPDATE
       for (const item of data.items) {
-        const [product] = await conn.query('SELECT stock_quantity, name FROM products WHERE id = ?', [item.product_id]);
+        const [product] = await conn.query('SELECT stock_quantity, name, unit_price FROM products WHERE id = ? FOR UPDATE', [item.product_id]);
         if (!product[0]) throw new Error(`Product ${item.product_id} not found.`);
         if (product[0].stock_quantity < item.quantity) {
           throw new Error(`Insufficient stock for ${product[0].name}. Available: ${product[0].stock_quantity}`);
         }
+        
+        const realPrice = parseFloat(product[0].unit_price);
+        calculatedTotal += item.quantity * realPrice;
+        verifiedItems.push({ ...item, realPrice });
       }
 
       const saleNumber = generateRefNumber('INV');
-      const totalAmount = data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-      const discount = data.discount || 0;
-      const tax = data.tax || 0;
-      const netAmount = totalAmount - discount + tax;
+      const discount = parseFloat(data.discount || 0);
+      const tax = parseFloat(data.tax || 0);
+      const netAmount = calculatedTotal - discount + tax;
 
       const [result] = await conn.query(
         `INSERT INTO sales (workspace_id, sale_number, customer_name, customer_email, customer_phone,
          total_amount, discount, tax, net_amount, status, notes, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.workspace_id, saleNumber, data.customer_name || null, data.customer_email || null,
-         data.customer_phone || null, totalAmount, discount, tax, netAmount,
+         data.customer_phone || null, calculatedTotal, discount, tax, netAmount,
          data.status || 'completed', data.notes || null, data.created_by]
       );
 
-      for (const item of data.items) {
-        const totalPrice = item.quantity * item.unit_price;
+      for (const item of verifiedItems) {
+        const totalPrice = item.quantity * item.realPrice;
         await conn.query(
           'INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?)',
-          [result.insertId, item.product_id, item.quantity, item.unit_price, totalPrice]
+          [result.insertId, item.product_id, item.quantity, item.realPrice, totalPrice]
         );
         // Decrement stock
         await conn.query(

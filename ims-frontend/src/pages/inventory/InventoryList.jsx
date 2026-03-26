@@ -42,8 +42,8 @@ export default function InventoryList() {
   const outOfStock = inventory.filter(i => i.stockQty === 0).length;
 
   const filteredInventory = inventory.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [

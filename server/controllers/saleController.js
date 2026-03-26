@@ -6,7 +6,6 @@ const saleController = {
       const result = await Sale.getAll(req.workspaceId, req.query);
       res.json(result);
     } catch (error) {
-      console.error('Get sales error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -20,7 +19,6 @@ const saleController = {
       }
       res.json({ sale });
     } catch (error) {
-      console.error('Get sale error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -31,7 +29,6 @@ const saleController = {
       const sale = await Sale.create(data);
       res.status(201).json({ message: 'Sale recorded.', sale });
     } catch (error) {
-      console.error('Create sale error:', error);
       if (error.message.includes('Insufficient stock')) {
         return res.status(400).json({ message: error.message });
       }
@@ -45,7 +42,6 @@ const saleController = {
       if (!deleted) return res.status(404).json({ message: 'Sale not found.' });
       res.json({ message: 'Sale deleted.' });
     } catch (error) {
-      console.error('Delete sale error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

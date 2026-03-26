@@ -74,8 +74,8 @@ export default function ProductList() {
 
   // Apply visual filters
   let displayedProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   if (categoryFilter !== 'All') displayedProducts = displayedProducts.filter(p => p.category === categoryFilter);
   if (manufacturerFilter !== 'All') displayedProducts = displayedProducts.filter(p => String(p.manufacturer_id) === manufacturerFilter);

@@ -1,31 +1,36 @@
 const StatCard = ({ title, value, icon: Icon, trend, color = 'primary', subtitle }) => {
-  const colorMap = {
-    primary: 'from-primary-500 to-primary-600',
-    green: 'from-emerald-500 to-emerald-600',
-    blue: 'from-blue-500 to-blue-600',
-    amber: 'from-amber-500 to-amber-600',
-    rose: 'from-rose-500 to-rose-600',
-    purple: 'from-purple-500 to-purple-600'
+  const styleMap = {
+    primary:   { bg: 'rgba(129,140,248,0.12)', icon: '#a5b4fc' },
+    green:     { bg: 'rgba(110,231,183,0.10)', icon: '#6ee7b7' },
+    blue:      { bg: 'var(--info-bg)',         icon: 'var(--info-text)' },
+    amber:     { bg: 'rgba(251,191,36,0.10)',  icon: '#fbbf24' },
+    rose:      { bg: 'rgba(252,165,165,0.10)', icon: '#fca5a5' },
+    purple:    { bg: 'rgba(129,140,248,0.12)', icon: '#818cf8' }
   };
+  const theme = styleMap[color] || styleMap.primary;
 
   return (
-    <div className="glass-card rounded-2xl p-5 hover:shadow-lg transition-all duration-300 group">
+    <div className="card-interactive p-5 group rounded-[12px]" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-faint)' }}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${colorMap[color]} shadow-lg shadow-${color}-500/20
-                        group-hover:scale-110 transition-transform duration-300`}>
-          {Icon && <Icon className="w-5 h-5 text-white" />}
+        <div className="flex items-center justify-center transition-transform duration-300 group-hover:scale-110" 
+             style={{ width: '36px', height: '36px', borderRadius: '10px', background: theme.bg }}>
+          {Icon && <Icon className="w-5 h-5" style={{ color: theme.icon }} />}
         </div>
         {trend !== undefined && (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full
-            ${trend >= 0 ? 'text-emerald-700 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/30'
-                         : 'text-rose-700 bg-rose-100 dark:text-rose-400 dark:bg-rose-900/30'}`}>
+          <span className="px-2 py-0.5 rounded-full font-semibold"
+                style={{
+                  fontSize: '11px',
+                  background: trend >= 0 ? 'var(--success-bg)' : 'var(--danger-bg)',
+                  color: trend >= 0 ? 'var(--success-text)' : 'var(--danger-text)',
+                  border: `1px solid ${trend >= 0 ? 'var(--success-border)' : 'var(--danger-border)'}`
+                }}>
             {trend >= 0 ? '+' : ''}{trend}%
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-surface-900 dark:text-white mb-0.5">{value}</p>
-      <p className="text-sm text-surface-500 dark:text-surface-400">{title}</p>
-      {subtitle && <p className="text-xs text-surface-400 dark:text-surface-500 mt-1">{subtitle}</p>}
+      <p className="font-semibold mb-0.5" style={{ color: 'var(--text-primary)', fontSize: '24px' }}>{value}</p>
+      <p className="uppercase font-medium" style={{ color: 'var(--text-tertiary)', fontSize: '11px', letterSpacing: '0.6px' }}>{title}</p>
+      {subtitle && <p className="mt-1" style={{ color: 'var(--text-tertiary)', fontSize: '11px' }}>{subtitle}</p>}
     </div>
   );
 };

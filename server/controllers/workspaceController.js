@@ -7,7 +7,6 @@ const workspaceController = {
       const workspaces = await Workspace.getAll();
       res.json({ workspaces });
     } catch (error) {
-      console.error('Get workspaces error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -18,7 +17,6 @@ const workspaceController = {
       if (!workspace) return res.status(404).json({ message: 'Workspace not found.' });
       res.json({ workspace });
     } catch (error) {
-      console.error('Get workspace error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -28,7 +26,6 @@ const workspaceController = {
       const workspace = await Workspace.create(req.body);
       res.status(201).json({ message: 'Workspace created.', workspace });
     } catch (error) {
-      console.error('Create workspace error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -39,7 +36,6 @@ const workspaceController = {
       if (!workspace) return res.status(404).json({ message: 'Workspace not found.' });
       res.json({ message: 'Workspace updated.', workspace });
     } catch (error) {
-      console.error('Update workspace error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -50,7 +46,6 @@ const workspaceController = {
       if (!deleted) return res.status(404).json({ message: 'Workspace not found.' });
       res.json({ message: 'Workspace deleted.' });
     } catch (error) {
-      console.error('Delete workspace error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -61,7 +56,6 @@ const workspaceController = {
       const users = await WorkspaceUser.getAllUsersWithWorkspaceAccess(req.params.id);
       res.json({ users });
     } catch (error) {
-      console.error('Get workspace users error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -77,7 +71,6 @@ const workspaceController = {
       });
       res.status(201).json({ message: 'User assigned.', assignment });
     } catch (error) {
-      console.error('Assign user error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -88,7 +81,6 @@ const workspaceController = {
       if (!revoked) return res.status(404).json({ message: 'Assignment not found.' });
       res.json({ message: 'User access revoked.' });
     } catch (error) {
-      console.error('Revoke user error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -100,7 +92,6 @@ const workspaceController = {
       if (!result) return res.status(404).json({ message: 'Assignment not found.' });
       res.json({ message: 'Access level updated.', assignment: result });
     } catch (error) {
-      console.error('Update access error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -123,7 +114,6 @@ const workspaceController = {
       }));
       res.json({ workspaces });
     } catch (error) {
-      console.error('Get my workspaces error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

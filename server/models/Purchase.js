@@ -89,15 +89,30 @@ class Purchase {
     try {
       await conn.beginTransaction();
 
+      // Lock row and check previous status to prevent infinite stock generation
+      const [[currentPurchase]] = await conn.query('SELECT status FROM purchases WHERE id = ? FOR UPDATE', [id]);
+      if (!currentPurchase) throw new Error('Purchase not found');
+
       await conn.query('UPDATE purchases SET status = ? WHERE id = ?', [status, id]);
 
-      // If received, increment stock for each item
-      if (status === 'received') {
+      // If transitioning into 'received', increment stock for each item
+      if (status === 'received' && currentPurchase.status !== 'received') {
         await conn.query('UPDATE purchases SET received_date = CURDATE() WHERE id = ?', [id]);
         const [items] = await conn.query('SELECT * FROM purchase_items WHERE purchase_id = ?', [id]);
         for (const item of items) {
           await conn.query(
             'UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?',
+            [item.quantity, item.product_id]
+          );
+        }
+      } 
+      // If transitioning away from 'received', revert the stock additions
+      else if (currentPurchase.status === 'received' && status !== 'received') {
+        await conn.query('UPDATE purchases SET received_date = NULL WHERE id = ?', [id]);
+        const [items] = await conn.query('SELECT * FROM purchase_items WHERE purchase_id = ?', [id]);
+        for (const item of items) {
+          await conn.query(
+            'UPDATE products SET stock_quantity = GREATEST(stock_quantity - ?, 0) WHERE id = ?',
             [item.quantity, item.product_id]
           );
         }

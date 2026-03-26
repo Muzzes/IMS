@@ -20,6 +20,14 @@ import Notifications from './pages/notifications/Notifications';
 import Reports from './pages/reports/Reports';
 import WorkspaceList from './pages/settings/workspaces/WorkspaceList';
 import WorkspaceDetail from './pages/settings/workspaces/WorkspaceDetail';
+import UsersList from './pages/settings/users/UsersList';
+import RawMaterials from './pages/materials/RawMaterials';
+import InventoryList from './pages/inventory/InventoryList';
+import SystemSettings from './pages/settings/SystemSettings';
+
+// Error Pages
+import ForbiddenPage from './pages/errors/ForbiddenPage';
+import NotFoundPage from './pages/errors/NotFoundPage';
 
 const App = () => {
   return (
@@ -28,14 +36,22 @@ const App = () => {
         <WorkspaceProvider>
           <Router>
             <Toaster position="top-right" toastOptions={{
-              className: 'dark:bg-surface-800 dark:text-white border dark:border-surface-700 shadow-xl rounded-xl text-sm font-medium',
-              success: { iconTheme: { primary: '#10b981', secondary: '#fff' } },
-              error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } }
+              style: {
+                background: 'var(--bg-overlay)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '10px',
+                fontSize: '13px'
+              },
+              success: { iconTheme: { primary: 'var(--success-text)', secondary: 'var(--bg-overlay)' } },
+              error: { iconTheme: { primary: 'var(--danger-text)', secondary: 'var(--bg-overlay)' } }
             }} />
             
             <Routes>
               {/* Public */}
               <Route path="/login" element={<Login />} />
+              <Route path="/403" element={<ForbiddenPage />} />
+              <Route path="/404" element={<NotFoundPage />} />
 
               {/* Protected App */}
               <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -43,7 +59,9 @@ const App = () => {
                 
                 {/* Everyone but scopes apply */}
                 <Route path="products" element={<Products />} />
+                <Route path="inventory" element={<InventoryList />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="raw-materials" element={<RawMaterials />} />
 
                 {/* Staff + Admin only */}
                 <Route path="suppliers" element={<ProtectedRoute roles={['admin', 'staff']}><Suppliers /></ProtectedRoute>} />
@@ -56,10 +74,12 @@ const App = () => {
                 <Route path="settings" element={<ProtectedRoute roles={['admin']}><Navigate to="workspaces" replace /></ProtectedRoute>} />
                 <Route path="settings/workspaces" element={<ProtectedRoute roles={['admin']}><WorkspaceList /></ProtectedRoute>} />
                 <Route path="settings/workspaces/:id" element={<ProtectedRoute roles={['admin']}><WorkspaceDetail /></ProtectedRoute>} />
-
-                {/* Catch all */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="settings/users" element={<ProtectedRoute roles={['admin']}><UsersList /></ProtectedRoute>} />
+                <Route path="settings/system" element={<ProtectedRoute roles={['admin']}><SystemSettings /></ProtectedRoute>} />
               </Route>
+
+              {/* Catch all unmatched routes → 404 */}
+              <Route path="*" element={<Navigate to="/404" replace />} />
             </Routes>
           </Router>
         </WorkspaceProvider>

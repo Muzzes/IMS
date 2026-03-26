@@ -60,8 +60,8 @@ export default function SalesList() {
   ];
 
   const filteredData = data.filter(s => 
-    s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+    s.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

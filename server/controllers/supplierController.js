@@ -6,7 +6,6 @@ const supplierController = {
       const result = await Supplier.getAll(req.workspaceId, req.query);
       res.json(result);
     } catch (error) {
-      console.error('Get suppliers error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -20,7 +19,6 @@ const supplierController = {
       }
       res.json({ supplier });
     } catch (error) {
-      console.error('Get supplier error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -31,7 +29,6 @@ const supplierController = {
       const supplier = await Supplier.create(data);
       res.status(201).json({ message: 'Supplier created.', supplier });
     } catch (error) {
-      console.error('Create supplier error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -42,7 +39,6 @@ const supplierController = {
       if (!supplier) return res.status(404).json({ message: 'Supplier not found.' });
       res.json({ message: 'Supplier updated.', supplier });
     } catch (error) {
-      console.error('Update supplier error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -53,7 +49,6 @@ const supplierController = {
       if (!deleted) return res.status(404).json({ message: 'Supplier not found.' });
       res.json({ message: 'Supplier deleted.' });
     } catch (error) {
-      console.error('Delete supplier error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

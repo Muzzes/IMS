@@ -55,16 +55,17 @@ const DataTable = ({ columns, data, onRowClick, actions, searchable = true, page
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-[16px] glass-card">
+        <table className="w-full text-sm" style={{ background: 'transparent' }}>
           <thead>
-            <tr className="bg-surface-50 dark:bg-surface-800/50">
+            <tr>
               {columns.map(col => (
                 <th
                   key={col.accessor || col.header}
                   onClick={() => col.accessor && handleSort(col.accessor)}
-                  className={`px-4 py-3 text-left font-semibold text-surface-600 dark:text-surface-400 whitespace-nowrap
-                             ${col.accessor ? 'cursor-pointer select-none hover:text-primary-600' : ''}`}
+                  className={`px-4 py-3 text-left whitespace-nowrap uppercase font-semibold
+                             ${col.accessor ? 'cursor-pointer select-none hover:opacity-80' : ''}`}
+                  style={{ color: 'var(--text-secondary)', fontSize: '11px', letterSpacing: '0.6px', borderBottom: '1px solid var(--border-subtle)' }}
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.header}
@@ -72,61 +73,77 @@ const DataTable = ({ columns, data, onRowClick, actions, searchable = true, page
                   </span>
                 </th>
               ))}
-              {actions && <th className="px-4 py-3 text-right font-semibold text-surface-600 dark:text-surface-400">Actions</th>}
+              {actions && <th className="px-4 py-3 text-right uppercase font-semibold" style={{ color: 'var(--text-secondary)', fontSize: '11px', letterSpacing: '0.6px', borderBottom: '1px solid var(--border-subtle)' }}>Actions</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+          <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-4 py-8 text-center text-surface-400">
+                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-4 py-12 text-center" style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>
                   No data found.
                 </td>
               </tr>
-            ) : paginated.map((row, i) => (
+            ) : paginated.map((row, i) => {
+              return (
               <tr
                 key={row.id || i}
                 onClick={() => onRowClick?.(row)}
-                className={`bg-white dark:bg-surface-900 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors
-                           ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`table-row-hover ${onRowClick ? 'cursor-pointer' : ''}`}
+                style={{ background: 'transparent' }}
               >
                 {columns.map(col => (
-                  <td key={col.accessor || col.header} className="px-4 py-3 text-surface-700 dark:text-surface-300 whitespace-nowrap">
+                  <td key={col.accessor || col.header} className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
                     {col.render ? col.render(row) : row[col.accessor]}
                   </td>
                 ))}
                 {actions && (
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                     <div className="flex items-center justify-end gap-1">{actions(row)}</div>
                   </td>
                 )}
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-surface-500">
+        <div className="flex items-center justify-between mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>
           <span>Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, sorted.length)} of {sorted.length}</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                    className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 disabled:opacity-30">
+                    className="p-1.5 rounded-lg disabled:opacity-30 nav-item"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)', color: 'var(--text-secondary)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-overlay)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-subtle)'}>
               <HiChevronLeft className="w-4 h-4" />
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const start = Math.max(1, Math.min(page - 2, totalPages - 4));
               const p = start + i;
               if (p > totalPages) return null;
+              
+              const isActive = p === page;
               return (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-lg text-xs font-medium transition
-                    ${p === page ? 'bg-primary-600 text-white' : 'hover:bg-surface-100 dark:hover:bg-surface-800'}`}>
+                  className="w-8 h-8 rounded-lg text-xs font-medium transition nav-item"
+                  style={{
+                    background: isActive ? 'var(--accent-glow)' : 'var(--bg-subtle)',
+                    border: isActive ? '1px solid var(--border-accent)' : '1px solid var(--border-faint)',
+                    color: isActive ? 'var(--accent-bright)' : 'var(--text-secondary)'
+                  }}
+                  onMouseEnter={e => !isActive && (e.currentTarget.style.background = 'var(--bg-overlay)')}
+                  onMouseLeave={e => !isActive && (e.currentTarget.style.background = 'var(--bg-subtle)')}
+                >
                   {p}
                 </button>
               );
             })}
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                    className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 disabled:opacity-30">
+                    className="p-1.5 rounded-lg disabled:opacity-30 nav-item"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)', color: 'var(--text-secondary)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-overlay)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-subtle)'}>
               <HiChevronRight className="w-4 h-4" />
             </button>
           </div>

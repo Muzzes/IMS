@@ -4,6 +4,7 @@ import api from '../../../api/axios';
 import DataTable from '../../../components/DataTable';
 import Modal from '../../../components/Modal';
 import { PageLoader } from '../../../components/LoadingSpinner';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineBuildingStorefront } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 
@@ -11,7 +12,11 @@ const WorkspaceList = () => {
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', color: '#6366f1' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const emptyForm = { name: '', description: '', color: '#6366f1' };
+  const [form, setForm] = useState(emptyForm);
+
+  useEffect(() => { document.title = 'Workspaces — IMS Pro'; }, []);
 
   const fetchWorkspaces = async () => {
     try {
@@ -25,15 +30,19 @@ const WorkspaceList = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    const trimmedForm = { ...form, name: form.name.trim(), description: form.description.trim() };
+    if (!trimmedForm.name) { toast.error('Name is required'); return; }
+    setIsSubmitting(true);
     try {
-      await api.post('/workspaces', form);
+      await api.post('/workspaces', trimmedForm);
       toast.success('Workspace created');
       setModalOpen(false);
-      setForm({ name: '', description: '', color: '#6366f1' });
+      setForm(emptyForm);
       fetchWorkspaces();
-      // force reload context
       window.dispatchEvent(new Event('workspace-change'));
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to create'); }
+    finally { setIsSubmitting(false); }
   };
 
   if (loading) return <PageLoader />;
@@ -41,10 +50,10 @@ const WorkspaceList = () => {
   const columns = [
     { header: 'Workspace', accessor: 'name', render: w => (
       <div className="flex items-center gap-3">
-        <span className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm" style={{ backgroundColor: w.color + '20' }}>
+        <span className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: w.color + '20', border: '2px solid var(--border-strong)' }}>
           <HiOutlineBuildingStorefront className="w-4 h-4" style={{ color: w.color }} />
         </span>
-        <span className="font-semibold text-surface-900 dark:text-white">{w.name}</span>
+        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{w.name}</span>
       </div>
     )},
     { header: 'Description', accessor: 'description', render: w => <span className="text-surface-500 truncate max-w-sm">{w.description || '-'}</span> },
@@ -54,15 +63,18 @@ const WorkspaceList = () => {
   return (
     <div className="space-y-4 animate-fadeIn">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white">Manage Workspaces</h1>
-        <button onClick={() => setModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white text-sm font-semibold shadow-lg shadow-primary-500/20 hover:-translate-y-0.5 transition-all">
+        <h1 style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600, lineHeight: 1, letterSpacing: '-0.5px' }}>Manage Workspaces</h1>
+        <button onClick={() => { setForm(emptyForm); setModalOpen(true); }}
+                className="btn-primary flex items-center gap-2">
           <HiOutlinePlus className="w-4 h-4" /> New Workspace
         </button>
       </div>
 
       <DataTable columns={columns} data={workspaces} actions={(row) => (
-        <Link to={`/settings/workspaces/${row.id}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition">
+        <Link to={`/settings/workspaces/${row.id}`} className="flex items-center gap-1.5 text-sm font-medium transition"
+              style={{ background: 'var(--accent-glow)', color: 'var(--accent-bright)', borderRadius: '6px', padding: '6px 12px' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-glow)'}>
           <HiOutlinePencil className="w-4 h-4" /> Manage
         </Link>
       )} />
@@ -80,13 +92,15 @@ const WorkspaceList = () => {
           <div>
             <label className="block text-sm font-semibold mb-1">Brand Color</label>
             <div className="flex items-center gap-3">
-              <input type="color" value={form.color} onChange={e => setForm({...form, color: e.target.value})} className="w-10 h-10 p-1 rounded cursor-pointer bg-white dark:bg-surface-800 border dark:border-surface-700" />
+              <input type="color" value={form.color} onChange={e => setForm({...form, color: e.target.value})} className="w-10 h-10 p-1 rounded cursor-pointer bg-white dark:bg-surface-800 border dark:border-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500" />
               <input type="text" value={form.color} onChange={e => setForm({...form, color: e.target.value})} className="w-32 px-3 py-2 rounded-lg border dark:bg-surface-800 dark:border-surface-700 outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm uppercase" pattern="^#[0-9A-Fa-f]{6}$" title="Hex color code (e.g. #FF0000)" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg border dark:border-surface-700 text-sm font-medium hover:bg-surface-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700">Create</button>
+            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg border dark:border-surface-700 text-sm font-medium hover:bg-surface-50 dark:hover:bg-surface-800 transition">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition disabled:opacity-50 flex items-center gap-2">
+              {isSubmitting ? <><LoadingSpinner size="sm" /> Creating...</> : 'Create'}
+            </button>
           </div>
         </form>
       </Modal>

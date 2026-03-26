@@ -1,20 +1,32 @@
 const User = require('../models/User');
+const WorkspaceUser = require('../models/WorkspaceUser');
 const jwt = require('jsonwebtoken');
 
 const authController = {
   register: async (req, res) => {
     try {
-      const { name, email, password, role } = req.body;
+      const { name, email, password, role, workspace_id } = req.body;
       const existing = await User.findByEmail(email);
       if (existing) {
         return res.status(409).json({ message: 'Email already registered.' });
       }
 
-      const userRole = (req.user && req.user.role === 'admin') ? (role || 'staff') : 'staff';
+      // Role is validated in route, defaulting gracefully just in case.
+      const userRole = role || 'staff';
       const user = await User.create({ name, email, password, role: userRole });
+      
+      // Assign the user to the provided company automatically
+      if (workspace_id) {
+        await WorkspaceUser.assign({
+          workspace_id,
+          user_id: user.id,
+          access_level: 'full',
+          assigned_by: req.user.id
+        });
+      }
+
       res.status(201).json({ message: 'User registered successfully.', user });
     } catch (error) {
-      console.error('Register error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -77,7 +89,6 @@ const authController = {
       }
       res.json({ user });
     } catch (error) {
-      console.error('Me error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

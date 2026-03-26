@@ -33,15 +33,16 @@ const workspaceScope = async (req, res, next) => {
 
     // Check if user is assigned to this workspace
     const [rows] = await pool.query(
-      'SELECT id, access_level FROM workspace_users WHERE workspace_id = ? AND user_id = ?',
-      [wsId, req.user.id]
+      'SELECT workspace_id, access_level FROM workspace_users WHERE user_id = ?',
+      [req.user.id]
     );
 
     if (rows.length === 0) {
-      return res.status(403).json({ message: 'Forbidden. You do not have access to this workspace.' });
+      return res.status(403).json({ message: 'Forbidden. You do not have access to any workspace.' });
     }
 
-    req.workspaceId = wsId;
+    // Forcefully scope non-admins to their assigned workspace to prevent tampering
+    req.workspaceId = rows[0].workspace_id;
     req.workspaceAccess = rows[0].access_level;
     next();
   } catch (error) {

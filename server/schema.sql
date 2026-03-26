@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS products (
   category        VARCHAR(100),
   unit_price      DECIMAL(12,2) NOT NULL DEFAULT 0,
   cost_price      DECIMAL(12,2) NOT NULL DEFAULT 0,
-  stock_quantity  INT NOT NULL DEFAULT 0,
+  stock_quantity  INT UNSIGNED NOT NULL DEFAULT 0,
   min_stock_level INT NOT NULL DEFAULT 10,
   supplier_id     INT,
   manufacturer_id INT,

@@ -6,7 +6,6 @@ const productController = {
       const result = await Product.getAll(req.workspaceId, req.query);
       res.json(result);
     } catch (error) {
-      console.error('Get products error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -21,7 +20,6 @@ const productController = {
       }
       res.json({ product });
     } catch (error) {
-      console.error('Get product error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -36,7 +34,6 @@ const productController = {
       const product = await Product.create(data);
       res.status(201).json({ message: 'Product created.', product });
     } catch (error) {
-      console.error('Create product error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -52,7 +49,6 @@ const productController = {
       const product = await Product.update(req.params.id, req.body);
       res.json({ message: 'Product updated.', product });
     } catch (error) {
-      console.error('Update product error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -63,7 +59,6 @@ const productController = {
       if (!deleted) return res.status(404).json({ message: 'Product not found.' });
       res.json({ message: 'Product deleted.' });
     } catch (error) {
-      console.error('Delete product error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -73,7 +68,24 @@ const productController = {
       const categories = await Product.getCategories(req.workspaceId);
       res.json({ categories });
     } catch (error) {
-      console.error('Get categories error:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+
+  adjustStock: async (req, res) => {
+    try {
+      const { quantityChange } = req.body;
+      if (typeof quantityChange !== 'number') return res.status(400).json({ message: 'Invalid quantity change.' });
+      
+      const product = await Product.getById(req.params.id);
+      if (!product) return res.status(404).json({ message: 'Product not found.' });
+      if (req.workspaceId && product.workspace_id !== req.workspaceId) {
+        return res.status(403).json({ message: 'Forbidden.' });
+      }
+      
+      const updated = await Product.adjustStock(req.params.id, quantityChange);
+      res.json({ message: 'Stock adjusted.', product: updated });
+    } catch (error) {
       res.status(500).json({ message: 'Internal server error.' });
     }
   }

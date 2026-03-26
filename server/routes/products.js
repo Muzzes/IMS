@@ -13,6 +13,7 @@ router.get('/categories', productController.getCategories);
 router.get('/:id',        productController.getById);
 router.post('/',          productController.create);
 router.put('/:id',        productController.update);
+router.put('/:id/stock',  productController.adjustStock);
 router.delete('/:id',     productController.delete);
 
 module.exports = router;

@@ -6,7 +6,6 @@ const purchaseController = {
       const result = await Purchase.getAll(req.workspaceId, req.query);
       res.json(result);
     } catch (error) {
-      console.error('Get purchases error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -20,7 +19,6 @@ const purchaseController = {
       }
       res.json({ purchase });
     } catch (error) {
-      console.error('Get purchase error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -31,7 +29,6 @@ const purchaseController = {
       const purchase = await Purchase.create(data);
       res.status(201).json({ message: 'Purchase order created.', purchase });
     } catch (error) {
-      console.error('Create purchase error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -43,7 +40,6 @@ const purchaseController = {
       if (!purchase) return res.status(404).json({ message: 'Purchase not found.' });
       res.json({ message: `Purchase status updated to ${status}.`, purchase });
     } catch (error) {
-      console.error('Update purchase status error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
@@ -54,7 +50,6 @@ const purchaseController = {
       if (!deleted) return res.status(404).json({ message: 'Purchase not found.' });
       res.json({ message: 'Purchase deleted.' });
     } catch (error) {
-      console.error('Delete purchase error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   }
