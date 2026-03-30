@@ -5,7 +5,18 @@
       "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch.zip\" -d stitch_extracted/stitch1)",
       "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch\\(1\\).zip\" -d stitch_extracted/stitch2)",
       "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch\\(2\\).zip\" -d stitch_extracted/stitch3)",
-      "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch\\(3\\).zip\" -d stitch_extracted/stitch4)"
+      "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch\\(3\\).zip\" -d stitch_extracted/stitch4)",
+      "Bash(where ssh:*)",
+      "Bash(powershell -Command \"Get-Module -ListAvailable Posh-SSH\")",
+      "Bash(ssh:*)",
+      "Bash(tar --exclude='node_modules' --exclude='.env' --exclude='*.log' --exclude='*.txt' --exclude='seed_admin.js' --exclude='alter*.js' --exclude='check.js' --exclude='setup_db.js' -czvf deploy_server.tar.gz server/)",
+      "Bash(tar --exclude='node_modules' --exclude='build' --exclude='dist' --exclude='.env' --exclude='*.log' -czvf deploy_client.tar.gz client/)",
+      "Bash(scp:*)",
+      "Bash(sshpass:*)",
+      "Read(//c/Users/LOQ/.ssh/**)",
+      "Bash(powershell.exe -Command \"& { $password = '3HzP93EX4BAdZedZ'; ssh -o StrictHostKeyChecking=no ubuntu@202.51.70.201 'echo connected' }\" 2>&1)",
+      "Bash(ls -la deploy_*.tar.gz)",
+      "Bash(tar -tzf deploy_server.tar.gz)"
     ]
   }
 }
