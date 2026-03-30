@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p stitch_extracted)",
+      "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch.zip\" -d stitch_extracted/stitch1)",
+      "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch\\(1\\).zip\" -d stitch_extracted/stitch2)",
+      "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch\\(2\\).zip\" -d stitch_extracted/stitch3)",
+      "Bash(unzip -o \"C:/Users/LOQ/Downloads/stitch\\(3\\).zip\" -d stitch_extracted/stitch4)"
+    ]
+  }
+}

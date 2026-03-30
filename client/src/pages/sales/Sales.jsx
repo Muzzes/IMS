@@ -11,7 +11,7 @@ import FormSelect from '../../components/common/FormSelect';
 import FormTextarea from '../../components/common/FormTextarea';
 import { PageLoader } from '../../components/LoadingSpinner';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { HiOutlinePlus, HiOutlineEye, HiOutlinePrinter, HiOutlinePencil, HiOutlineReceiptRefund, HiOutlineLockClosed } from 'react-icons/hi2';
+import { HiOutlinePlus, HiOutlineEye, HiOutlinePrinter, HiOutlinePencil, HiOutlineReceiptRefund, HiOutlineLockClosed, HiOutlineTrash } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import POS from './POS';
 
@@ -24,6 +24,7 @@ const Sales = () => {
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Edit customer info
   const [editModal, setEditModal] = useState(false);
@@ -54,6 +55,16 @@ const Sales = () => {
       const { data } = await api.get(`/sales/${sale.id}`);
       setViewing(data.sale);
     } catch { toast.error('Failed to fetch details'); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/sales/${deleteTarget.id}`);
+      toast.success('Invoice deleted');
+      setDeleteTarget(null);
+      fetchSales();
+    } catch { toast.error('Failed to delete invoice'); }
   };
 
   // Edit customer info
@@ -146,17 +157,20 @@ const Sales = () => {
       </div>
 
       <DataTable columns={columns} data={sales} actions={(row) => (
-        <button onClick={() => handleView(row)} className="p-1.5 rounded-lg transition" style={{ color: 'var(--text-secondary)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.color = 'var(--accent-bright)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
-          <HiOutlineEye className="w-4 h-4" />
-        </button>
+        <div className="flex gap-1 justify-end">
+          <button onClick={() => handleView(row)} className="p-1.5 rounded-lg transition hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-bright)]">
+            <HiOutlineEye className="w-4 h-4" />
+          </button>
+          <button onClick={() => setDeleteTarget(row)} className="p-1.5 rounded-lg transition hover:bg-[var(--danger-bg)] text-[var(--danger-text)] opacity-60 hover:opacity-100">
+            <HiOutlineTrash className="w-4 h-4" />
+          </button>
+        </div>
       )} />
 
       {/* Invoice Detail Modal */}
       <Modal isOpen={!!viewing && !editModal && !refundModal} onClose={() => setViewing(null)} title={`Invoice — ${viewing?.sale_number || ''}`} size="lg">
         {viewing && (
-          <div className="space-y-6 print-area bg-white dark:bg-transparent text-surface-900 dark:text-inherit">
+          <div className="space-y-6 print-area text-white">
             <div className="flex justify-end gap-2 print:hidden">
               <button onClick={openEditModal} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition"
                       style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-faint)' }}>
@@ -326,6 +340,11 @@ const Sales = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Delete Confrmation */}
+      <ConfirmDialog isOpen={!!deleteTarget} title="Delete Invoice"
+                     message={`Are you sure you want to delete invoice ${deleteTarget?.sale_number}? This cannot be undone.`}
+                     onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
     </div>
   );
 };

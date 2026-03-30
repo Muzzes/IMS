@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
-import { useAuth } from './AuthContext';
+import { useAuth, validateToken } from './AuthContext';
 
 const WorkspaceContext = createContext(null);
 
@@ -27,10 +27,20 @@ export const WorkspaceProvider = ({ children }) => {
       const { data } = await api.get('/workspaces/my-workspaces');
       setWorkspaces(data.workspaces);
 
-      // Restore active workspace from localStorage or use first
+      // Validate saved workspace is assigned to this user
       const savedId = localStorage.getItem('ims_active_workspace');
-      const saved = data.workspaces.find(w => w.id === parseInt(savedId));
-      const initial = saved || data.workspaces[0] || null;
+      let initial = null;
+      if (savedId) {
+        const isAssigned = data.workspaces.find(w => w.id === parseInt(savedId));
+        if (isAssigned) {
+          initial = isAssigned;
+        } else {
+          localStorage.removeItem('ims_active_workspace');
+          initial = data.workspaces[0] || null;
+        }
+      } else {
+        initial = data.workspaces[0] || null;
+      }
 
       setActiveWorkspace(initial);
       if (initial) {
@@ -50,6 +60,10 @@ export const WorkspaceProvider = ({ children }) => {
   const switchWorkspace = (id) => {
     if (id === null) {
       // Admin: "All workspaces" mode
+      const token = localStorage.getItem('ims_token');
+      const decoded = validateToken(token);
+      if (decoded?.role !== 'admin') return;
+
       setActiveWorkspace(null);
       localStorage.removeItem('ims_active_workspace');
       return;

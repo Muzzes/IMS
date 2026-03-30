@@ -4,11 +4,14 @@ const validate = require('../middleware/validate');
 const auth = require('../middleware/auth');
 const workspaceScope = require('../middleware/workspaceScope');
 const authorize = require('../middleware/authorize');
+const auditLog = require('../middleware/auditLog');
 const saleController = require('../controllers/saleController');
 
 const router = express.Router();
 
 router.use(auth);
+const requireVerified = require('../middleware/requireVerified');
+router.use(requireVerified);
 router.use(authorize('admin', 'staff'));
 router.use(workspaceScope);
 
@@ -20,7 +23,7 @@ router.post('/', [
   body('items.*.product_id').isInt().withMessage('Valid product ID is required.'),
   body('items.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1.'),
   body('items.*.unit_price').isNumeric().withMessage('Unit price must be a number.')
-], validate, saleController.create);
-router.delete('/:id', saleController.delete);
+], validate, auditLog('CREATE_SALE'), saleController.create);
+router.delete('/:id', auditLog('DELETE_SALE'), saleController.delete);
 
 module.exports = router;

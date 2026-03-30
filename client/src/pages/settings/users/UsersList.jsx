@@ -11,6 +11,7 @@ import LoadingSpinner from '../../../components/LoadingSpinner';
 import { HiOutlinePlus, HiOutlineTrash, HiOutlineUserMinus, HiOutlineUserPlus } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import Badge from '../../../components/Badge';
+import { validateEmail } from '../../../utils/validateEmail';
 
 const emptyForm = { name: '', email: '', password: '', role: 'staff', workspace_id: '' };
 
@@ -50,9 +51,22 @@ const UsersList = () => {
   const validate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Name is required';
-    if (!form.email.trim()) errs.email = 'Email is required';
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email';
-    if (!form.password || form.password.length < 6) errs.password = 'Min 6 characters';
+    if (!form.email.trim()) {
+      errs.email = 'Email is required';
+    } else {
+      const emailRes = validateEmail(form.email);
+      if (!emailRes.valid) errs.email = emailRes.message;
+    }
+    
+    // Strict password requirements as per audit
+    if (!form.password) errs.password = 'Required';
+    else if (form.password.length < 8) errs.password = 'Min 8 characters';
+    else if (!/[A-Z]/.test(form.password)) errs.password = 'Requires uppercase';
+    else if (!/[a-z]/.test(form.password)) errs.password = 'Requires lowercase';
+    else if (!/[0-9]/.test(form.password)) errs.password = 'Requires number';
+    else if (!/[^A-Za-z0-9]/.test(form.password)) errs.password = 'Requires special char';
+    else if (/\s/.test(form.password)) errs.password = 'No spaces allowed';
+    
     if (!form.workspace_id) errs.workspace_id = 'Required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -72,6 +86,24 @@ const UsersList = () => {
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to create user'); }
     finally { setIsSubmitting(false); }
   };
+
+  const getPasswordStrength = (pwd) => {
+    if (!pwd) return { label: '', color: 'transparent', score: 0 };
+    if (/\s/.test(pwd)) return { label: 'Weak (No spaces allowed)', color: 'var(--danger-text)', score: 0 };
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    
+    if (score <= 2) return { label: 'Weak', color: 'var(--danger-text)', score };
+    if (score === 3) return { label: 'Fair', color: 'var(--warning-text)', score };
+    if (score === 4) return { label: 'Strong', color: 'var(--success-text)', score };
+    return { label: 'Very Strong', color: 'var(--success-text)', score };
+  };
+
+  const strength = getPasswordStrength(form.password);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -168,13 +200,32 @@ const UsersList = () => {
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Create New User" size="md">
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <FormField label="Full Name" required error={errors.name}>
-            <FormInput value={form.name} onChange={e => updateField('name', e.target.value)} error={errors.name} placeholder="John Doe" />
+            <FormInput value={form.name} onChange={e => updateField('name', e.target.value)} error={errors.name} placeholder="Name" />
           </FormField>
           <FormField label="Email Address" required error={errors.email}>
-            <FormInput type="email" value={form.email} onChange={e => updateField('email', e.target.value)} error={errors.email} placeholder="john@example.com" />
+            <FormInput type="email" value={form.email} 
+              onChange={e => updateField('email', e.target.value)} 
+              onBlur={() => {
+                if (form.email) {
+                  const res = validateEmail(form.email);
+                  if (!res.valid) setErrors(e => ({ ...e, email: res.message }));
+                }
+              }}
+              error={errors.email} placeholder="Email Address" />
           </FormField>
           <FormField label="Temporary Password" required error={errors.password}>
-            <FormInput type="password" value={form.password} onChange={e => updateField('password', e.target.value)} error={errors.password} placeholder="At least 6 characters" />
+            <FormInput type="password" value={form.password} onChange={e => updateField('password', e.target.value)} error={errors.password} placeholder="At least 8 chars, 1 uppercase, 1 number, 1 special" />
+            {form.password && (
+              <div className="mt-1 flex items-center gap-2">
+                <div className="flex-1 flex gap-1 h-1.5 rounded-full overflow-hidden bg-[var(--bg-subtle)]">
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <div key={level} className="flex-1 h-full transition-colors duration-300"
+                         style={{ background: level <= strength.score ? strength.color : 'transparent' }} />
+                  ))}
+                </div>
+                <span style={{ fontSize: '10px', color: strength.color, fontWeight: 'bold' }}>{strength.label}</span>
+              </div>
+            )}
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Role" required>

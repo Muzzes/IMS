@@ -11,6 +11,7 @@ import { PageLoader } from '../../components/LoadingSpinner';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
+import { validateEmail } from '../../utils/validateEmail';
 
 const Suppliers = () => {
   const { activeWorkspace } = useWorkspace();
@@ -41,9 +42,11 @@ const Suppliers = () => {
 
   const validate = () => {
     const errs = {};
-    if (!form.name.trim()) errs.name = 'Name is required';
-    if (form.name.trim().length < 2) errs.name = 'Minimum 2 characters';
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email';
+    if (!form.name.trim()) errs.name = 'Supplier name is required';
+    if (form.email) {
+      const emailRes = validateEmail(form.email);
+      if (!emailRes.valid) errs.email = emailRes.message;
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -150,7 +153,15 @@ const Suppliers = () => {
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Email" error={errors.email}>
-              <FormInput type="email" value={form.email} onChange={e => updateField('email', e.target.value)} error={errors.email} placeholder="email@example.com" />
+              <FormInput type="email" value={form.email} 
+                onChange={e => updateField('email', e.target.value)} 
+                onBlur={() => {
+                  if (form.email) {
+                    const res = validateEmail(form.email);
+                    if (!res.valid) setErrors(e => ({ ...e, email: res.message }));
+                  }
+                }}
+                error={errors.email} placeholder="Email" />
             </FormField>
             <FormField label="Phone">
               <FormInput value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="Phone number" />

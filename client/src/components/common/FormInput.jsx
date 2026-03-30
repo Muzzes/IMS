@@ -1,3 +1,5 @@
+import { blockInvalidNumberChars } from '../../utils/sanitize';
+
 const FormInput = ({
   name,
   value,
@@ -11,6 +13,7 @@ const FormInput = ({
   min,
   max,
   step,
+  maxLength = 255,
   className = '',
   ...rest
 }) => {
@@ -21,11 +24,13 @@ const FormInput = ({
       type={type}
       value={value}
       onChange={onChange}
+      onKeyDown={type === 'number' ? blockInvalidNumberChars : rest.onKeyDown}
       placeholder={placeholder}
       disabled={disabled}
       min={min}
       max={max}
       step={step}
+      maxLength={maxLength}
       className={`w-full px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${prefix ? 'pl-8' : ''} ${suffix ? 'pr-8' : ''} ${className}`}
       style={inputStyle}
       {...rest}

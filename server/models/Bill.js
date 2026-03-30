@@ -39,7 +39,7 @@ class Bill {
     );
     if (!rows[0]) return null;
     const [payments] = await pool.query(
-      'SELECT * FROM bill_payments WHERE bill_id = ? ORDER BY payment_date DESC', [id]
+      'SELECT id, bill_id, amount, payment_method, reference, payment_date, notes FROM bill_payments WHERE bill_id = ? ORDER BY payment_date DESC', [id]
     );
     return { ...rows[0], payments };
   }

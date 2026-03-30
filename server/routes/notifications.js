@@ -6,6 +6,8 @@ const notificationController = require('../controllers/notificationController');
 const router = express.Router();
 
 router.use(auth);
+const requireVerified = require('../middleware/requireVerified');
+router.use(requireVerified);
 router.use(workspaceScope);
 
 router.get('/',              notificationController.getAll);

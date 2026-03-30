@@ -38,49 +38,46 @@ const DataTable = ({ columns, data, onRowClick, actions, searchable = true, page
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {searchable && (
         <div className="relative max-w-sm">
-          <HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search details..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-surface-200 dark:border-surface-700
-                       bg-white dark:bg-surface-800 text-sm
-                       focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
+            className="w-full pl-9 pr-4 py-2 rounded-lg text-sm bg-[var(--bg-surface)] border border-[var(--border-subtle)] focus:border-[var(--accent-bright)] outline-none transition text-white"
             id="table-search"
           />
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-[16px] glass-card">
-        <table className="w-full text-sm" style={{ background: 'transparent' }}>
+      <div className="overflow-x-auto rounded-[12px] pb-2" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+        <table className="w-full text-sm text-left border-collapse">
           <thead>
             <tr>
               {columns.map(col => (
                 <th
                   key={col.accessor || col.header}
                   onClick={() => col.accessor && handleSort(col.accessor)}
-                  className={`px-4 py-3 text-left whitespace-nowrap uppercase font-semibold
-                             ${col.accessor ? 'cursor-pointer select-none hover:opacity-80' : ''}`}
-                  style={{ color: 'var(--text-secondary)', fontSize: '11px', letterSpacing: '0.6px', borderBottom: '1px solid var(--border-subtle)' }}
+                  className={`px-4 py-4 text-[10px] font-bold tracking-wider text-[var(--text-secondary)] uppercase border-b-2 border-[var(--bg-muted)]
+                             ${col.accessor ? 'cursor-pointer select-none hover:text-white transition' : ''}`}
                 >
-                  <span className="inline-flex items-center gap-1">
+                  <span className="flex items-center gap-1">
                     {col.header}
-                    {sortKey === col.accessor && (sortDir === 'asc' ? <HiChevronUp className="w-3 h-3" /> : <HiChevronDown className="w-3 h-3" />)}
+                    {sortKey === col.accessor && (sortDir === 'asc' ? <HiChevronUp className="w-3 h-3 text-[var(--accent-bright)]" /> : <HiChevronDown className="w-3 h-3 text-[var(--accent-bright)]" />)}
                   </span>
                 </th>
               ))}
-              {actions && <th className="px-4 py-3 text-right uppercase font-semibold" style={{ color: 'var(--text-secondary)', fontSize: '11px', letterSpacing: '0.6px', borderBottom: '1px solid var(--border-subtle)' }}>Actions</th>}
+              {actions && <th className="px-4 py-4 text-[10px] font-bold tracking-wider text-[var(--text-secondary)] uppercase border-b-2 border-[var(--bg-muted)] text-right">ACTIONS</th>}
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-4 py-12 text-center" style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>
-                  No data found.
+                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-4 py-12 text-center text-[var(--text-muted)] font-semibold text-sm">
+                  No records to display.
                 </td>
               </tr>
             ) : paginated.map((row, i) => {
@@ -88,67 +85,58 @@ const DataTable = ({ columns, data, onRowClick, actions, searchable = true, page
               <tr
                 key={row.id || i}
                 onClick={() => onRowClick?.(row)}
-                className={`table-row-hover ${onRowClick ? 'cursor-pointer' : ''}`}
-                style={{ background: 'transparent' }}
+                className={`transition group border-b border-[var(--border-faint)] hover:bg-[var(--bg-subtle)] ${onRowClick ? 'cursor-pointer' : ''}`}
               >
                 {columns.map(col => (
-                  <td key={col.accessor || col.header} className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td key={col.accessor || col.header} className="px-4 py-4 whitespace-nowrap text-[13px] font-medium text-white">
                     {col.render ? col.render(row) : row[col.accessor]}
                   </td>
                 ))}
                 {actions && (
-                  <td className="px-4 py-3 text-right" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <div className="flex items-center justify-end gap-1">{actions(row)}</div>
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {actions(row)}
+                    </div>
                   </td>
                 )}
               </tr>
             )})}
           </tbody>
         </table>
-      </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>
-          <span>Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, sorted.length)} of {sorted.length}</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                    className="p-1.5 rounded-lg disabled:opacity-30 nav-item"
-                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)', color: 'var(--text-secondary)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-overlay)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-subtle)'}>
-              <HiChevronLeft className="w-4 h-4" />
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-              const p = start + i;
-              if (p > totalPages) return null;
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 pt-4 mt-2 border-t border-[var(--border-subtle)]">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+              SHOWING {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, sorted.length)} OF {sorted.length} RECORDS
+            </p>
+            <div className="flex items-center gap-1 text-xs">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-elevated)] text-[var(--text-muted)] disabled:opacity-30 disabled:hover:bg-transparent">
+                <HiChevronLeft className="w-4 h-4" />
+              </button>
               
-              const isActive = p === page;
-              return (
-                <button key={p} onClick={() => setPage(p)}
-                  className="w-8 h-8 rounded-lg text-xs font-medium transition nav-item"
-                  style={{
-                    background: isActive ? 'var(--accent-glow)' : 'var(--bg-subtle)',
-                    border: isActive ? '1px solid var(--border-accent)' : '1px solid var(--border-faint)',
-                    color: isActive ? 'var(--accent-bright)' : 'var(--text-secondary)'
-                  }}
-                  onMouseEnter={e => !isActive && (e.currentTarget.style.background = 'var(--bg-overlay)')}
-                  onMouseLeave={e => !isActive && (e.currentTarget.style.background = 'var(--bg-subtle)')}
-                >
-                  {p}
-                </button>
-              );
-            })}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                    className="p-1.5 rounded-lg disabled:opacity-30 nav-item"
-                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)', color: 'var(--text-secondary)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-overlay)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-subtle)'}>
-              <HiChevronRight className="w-4 h-4" />
-            </button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                const p = start + i;
+                if (p > totalPages) return null;
+                const isActive = p === page;
+                return (
+                  <button key={p} onClick={() => setPage(p)}
+                    className={`w-6 h-6 flex items-center justify-center rounded font-bold transition
+                                ${isActive ? 'bg-[var(--accent-bright)] text-white' : 'hover:bg-[var(--bg-elevated)] text-[var(--text-primary)]'}`}>
+                    {p}
+                  </button>
+                );
+              })}
+
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-elevated)] text-[var(--text-muted)] disabled:opacity-30 disabled:hover:bg-transparent">
+                <HiChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

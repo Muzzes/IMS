@@ -1,4 +1,7 @@
 const Bill = require('../models/Bill');
+const pool = require('../config/db');
+const { sendBillToCustomer, sendPaymentConfirmation } = require('../templates/emails');
+const { shouldSendEmail } = require('../utils/notificationUtils');
 
 const billController = {
   getAll: async (req, res) => {
@@ -35,8 +38,25 @@ const billController = {
 
   update: async (req, res) => {
     try {
+      const prevBill = await Bill.getById(req.params.id);
       const bill = await Bill.update(req.params.id, req.body);
       if (!bill) return res.status(404).json({ message: 'Bill not found.' });
+
+      // Trigger customer email when bill status changes to 'issued'
+      if (req.body.status === 'issued' && prevBill?.status !== 'issued' && req.body.customer_email) {
+        try {
+          const canSend = await shouldSendEmail(req.user.id, 'bill_issued');
+          if (canSend) {
+            await sendBillToCustomer(req.body.customer_email, req.body.customer_name || 'Customer', {
+              ...bill,
+              workspace_name: req.body.workspace_name
+            });
+          }
+        } catch (emailErr) {
+          console.error('Bill issued notification failed:', emailErr.message);
+        }
+      }
+
       res.json({ message: 'Bill updated.', bill });
     } catch (error) {
       res.status(500).json({ message: 'Internal server error.' });
@@ -47,6 +67,23 @@ const billController = {
     try {
       const bill = await Bill.addPayment(req.params.id, req.body);
       res.status(201).json({ message: 'Payment recorded.', bill });
+
+      // Send payment confirmation to customer asynchronously
+      if (req.body.customer_email) {
+        try {
+          const canSend = await shouldSendEmail(req.user.id, 'payment');
+          if (canSend) {
+            await sendPaymentConfirmation(
+              req.body.customer_email,
+              req.body.customer_name || 'Customer',
+              bill,
+              { amount: req.body.amount, method: req.body.payment_method || 'N/A', payment_date: req.body.payment_date || new Date(), reference: req.body.reference }
+            );
+          }
+        } catch (emailErr) {
+          console.error('Payment confirmation email failed:', emailErr.message);
+        }
+      }
     } catch (error) {
       res.status(500).json({ message: 'Internal server error.' });
     }

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api/axios';
+import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext(null);
 
@@ -9,89 +10,139 @@ export const useAuth = () => {
   return ctx;
 };
 
-/**
- * Decode JWT payload without a library.
- * Returns the decoded payload object or null on failure.
- */
-const decodeToken = (token) => {
+// Validate token based on expiry and required fields
+export const validateToken = (token) => {
+  if (!token) return false;
   try {
-    const payload = token.split('.')[1];
-    return JSON.parse(atob(payload));
+    const decoded = jwtDecode(token);
+    const now = Date.now() / 1000;
+    if (decoded.exp < now) {
+      return false;
+    }
+    if (!decoded.id || !decoded.role) {
+      return false;
+    }
+    return decoded;
   } catch {
-    return null;
+    return false;
   }
 };
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const expiryTimer = useRef(null);
+  const refreshTimer = useRef(null);
 
-  const clearAuth = useCallback(() => {
+  const clearAuthVariables = useCallback(() => {
     localStorage.removeItem('ims_token');
     localStorage.removeItem('ims_refresh_token');
     localStorage.removeItem('ims_active_workspace');
-    if (expiryTimer.current) clearTimeout(expiryTimer.current);
+    localStorage.removeItem('ims_user');
+    sessionStorage.clear();
+    
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
     setUser(null);
   }, []);
 
-  const logout = useCallback(() => {
-    clearAuth();
-    // Replace history so back button cannot return to authenticated pages
-    window.location.replace('/login');
-  }, [clearAuth]);
-
-  /**
-   * Schedule auto-logout 30 seconds before the JWT expires.
-   */
-  const scheduleAutoLogout = useCallback((token) => {
-    if (expiryTimer.current) clearTimeout(expiryTimer.current);
-    const decoded = decodeToken(token);
-    if (!decoded?.exp) return;
-    const msUntilExpiry = decoded.exp * 1000 - Date.now() - 30000; // 30s buffer
-    if (msUntilExpiry <= 0) {
-      logout();
-      return;
+  const logout = useCallback(async () => {
+    try {
+      const refreshToken = localStorage.getItem('ims_refresh_token');
+      // Backend blacklists token on logout
+      await api.post('/auth/logout', { refreshToken });
+    } catch {
+      // Ignore if network is down or already unauthenticated
+    } finally {
+      clearAuthVariables();
+      // Replace browser history and hard reload to clear memory state completely
+      window.history.replaceState(null, '', '/login');
+      window.location.href = '/login';
     }
-    expiryTimer.current = setTimeout(logout, msUntilExpiry);
+  }, [clearAuthVariables]);
+
+  const scheduleTokenRefresh = useCallback((token) => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    try {
+      const { exp } = jwtDecode(token);
+      const now = Date.now() / 1000;
+      const msUntilExpiry = (exp - now) * 1000;
+      const refreshAt = msUntilExpiry - (5 * 60 * 1000); // 5 minutes before expiry
+      
+      if (refreshAt > 0) {
+        refreshTimer.current = setTimeout(async () => {
+          try {
+            const refreshTokenStr = localStorage.getItem('ims_refresh_token');
+            if (refreshTokenStr) {
+               const { data } = await api.post('/auth/refresh', { refreshToken: refreshTokenStr });
+               if (data && data.token) {
+                 localStorage.setItem('ims_token', data.token);
+                 scheduleTokenRefresh(data.token);
+               } else {
+                 logout();
+               }
+            } else {
+              logout();
+            }
+          } catch {
+            logout();
+          }
+        }, refreshAt);
+      }
+    } catch {
+       // invalid token
+    }
   }, [logout]);
 
-  // Initialize: check for existing token on mount
+  // Initial check
   useEffect(() => {
     const token = localStorage.getItem('ims_token');
+    
     if (token) {
+      const validToken = validateToken(token);
+      if (!validToken) {
+        clearAuthVariables();
+        setLoading(false);
+        return;
+      }
+      
       api.get('/auth/me')
         .then(({ data }) => {
           setUser(data.user);
-          scheduleAutoLogout(token);
+          scheduleTokenRefresh(token);
         })
         .catch(() => {
-          clearAuth();
+          clearAuthVariables();
         })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [clearAuth, scheduleAutoLogout]);
+  }, [clearAuthVariables, scheduleTokenRefresh]);
 
-  // Cross-tab logout detection: if another tab removes the token, log out here too
+  // Concurrent session / cross-tab detection
   useEffect(() => {
     const handleStorage = (e) => {
-      if (e.key === 'ims_token' && !e.newValue) {
-        clearAuth();
-        window.location.replace('/login');
+      if (e.key === 'ims_token') {
+        if (!e.newValue) {
+          clearAuthVariables();
+          window.location.replace('/login');
+        } else if (e.newValue !== e.oldValue) {
+          const decoded = validateToken(e.newValue);
+          if (decoded) {
+            scheduleTokenRefresh(e.newValue);
+          }
+        }
       }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, [clearAuth]);
+  }, [clearAuthVariables, scheduleTokenRefresh]);
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
     localStorage.setItem('ims_token', data.token);
     localStorage.setItem('ims_refresh_token', data.refreshToken);
     setUser(data.user);
-    scheduleAutoLogout(data.token);
+    scheduleTokenRefresh(data.token);
     return data;
   };
 

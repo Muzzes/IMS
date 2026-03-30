@@ -17,7 +17,7 @@ class Supplier {
     }
 
     const [rows] = await pool.query(
-      `SELECT * FROM suppliers ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT id, workspace_id, name, email, phone, address, is_active, created_at FROM suppliers ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
     const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM suppliers ${where}`, params);
@@ -25,7 +25,7 @@ class Supplier {
   }
 
   static async getById(id) {
-    const [rows] = await pool.query('SELECT * FROM suppliers WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT id, workspace_id, name, email, phone, address, is_active, created_at FROM suppliers WHERE id = ?', [id]);
     return rows[0] || null;
   }
 

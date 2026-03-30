@@ -6,7 +6,7 @@ const FormTextarea = ({
   error,
   placeholder,
   disabled = false,
-  maxLength,
+  maxLength = 2000,
   className = '',
 }) => {
   return (

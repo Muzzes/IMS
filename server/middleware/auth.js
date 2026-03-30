@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const tokenBlacklist = require('./tokenBlacklist');
 
 const auth = (req, res, next) => {
   try {
@@ -8,8 +9,14 @@ const auth = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
+    
+    if (tokenBlacklist.has(token)) {
+      return res.status(401).json({ message: 'Token has been invalidated.' });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
+    req.token = token; // Make token available for logout controller
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

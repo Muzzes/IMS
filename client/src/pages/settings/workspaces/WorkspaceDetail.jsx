@@ -5,7 +5,8 @@ import DataTable from '../../../components/DataTable';
 import Modal from '../../../components/Modal';
 import { PageLoader } from '../../../components/LoadingSpinner';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import { HiOutlineArrowLeft, HiOutlineUserPlus, HiOutlineTrash } from 'react-icons/hi2';
+import { HiOutlineArrowLeft, HiOutlineUserPlus, HiOutlineTrash, HiOutlinePencil } from 'react-icons/hi2';
+import ConfirmDialog from '../../../components/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 const WorkspaceDetail = () => {
@@ -20,6 +21,10 @@ const WorkspaceDetail = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignForm, setAssignForm] = useState({ user_id: '', access_level: 'full' });
 
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', description: '', color: '' });
+  const [deleteDialog, setDeleteDialog] = useState(false);
+
   useEffect(() => { document.title = 'Workspace Details — IMS Pro'; }, []);
 
   const fetchData = useCallback(async () => {
@@ -30,6 +35,7 @@ const WorkspaceDetail = () => {
         api.get('/users') // Admin can fetch all users
       ]);
       setWorkspace(wsRes.data.workspace);
+      setEditForm({ name: wsRes.data.workspace.name, description: wsRes.data.workspace.description || '', color: wsRes.data.workspace.color || '#ffffff' });
       setUsers(usersRes.data.users);
       // Ensure only active staff/manufacturer users can be added
       setAllUsers(allUsersRes.data.data.filter(u => u.is_active));
@@ -69,6 +75,29 @@ const WorkspaceDetail = () => {
     } catch { toast.error('Failed to revoke'); }
   };
 
+  const handleEditWorkspace = async (e) => {
+    e.preventDefault();
+    if(isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await api.put(`/workspaces/${id}`, editForm);
+      toast.success('Workspace updated');
+      setEditModal(false);
+      fetchData();
+      window.dispatchEvent(new Event('workspace-change'));
+    } catch { toast.error('Failed to update workspace'); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    try {
+      await api.delete(`/workspaces/${id}`);
+      toast.success('Workspace deleted');
+      navigate('/settings/workspaces');
+      window.dispatchEvent(new Event('workspace-change'));
+    } catch { toast.error('Failed to delete workspace'); }
+  };
+
   if (loading) return <PageLoader />;
   if (!workspace) return null;
 
@@ -102,6 +131,14 @@ const WorkspaceDetail = () => {
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>{workspace.description || 'No description'}</p>
         </div>
+      </div>
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => setEditModal(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-faint)' }}>
+          <HiOutlinePencil className="w-4 h-4" /> Edit Details
+        </button>
+        <button onClick={() => setDeleteDialog(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition" style={{ background: 'var(--danger-bg)', color: 'var(--danger-text)', border: '1px solid var(--danger-text)' }}>
+          <HiOutlineTrash className="w-4 h-4" /> Delete Workspace
+        </button>
       </div>
 
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '24px' }}>
@@ -146,6 +183,36 @@ const WorkspaceDetail = () => {
           </div>
         </form>
       </Modal>
+
+      <Modal isOpen={editModal} onClose={() => setEditModal(false)} title="Edit Workspace">
+        <form onSubmit={handleEditWorkspace} className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1">Company / Workspace Name *</label>
+            <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} required className="w-full px-3 py-2 rounded-lg border dark:bg-surface-800 dark:border-surface-700 outline-none focus:ring-2 focus:ring-primary-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Description</label>
+            <textarea rows={2} value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="w-full px-3 py-2 rounded-lg border dark:bg-surface-800 dark:border-surface-700 outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Brand Color</label>
+            <div className="flex items-center gap-3">
+              <input type="color" value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="w-10 h-10 p-1 rounded cursor-pointer bg-white dark:bg-surface-800 border dark:border-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <input type="text" value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="w-32 px-3 py-2 rounded-lg border dark:bg-surface-800 dark:border-surface-700 outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm uppercase" pattern="^#[0-9A-Fa-f]{6}$" title="Hex color code (e.g. #FF0000)" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={() => setEditModal(false)} className="px-4 py-2 rounded-lg border dark:border-surface-700 text-sm font-medium hover:bg-surface-50 dark:hover:bg-surface-800 transition">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition disabled:opacity-50 flex items-center gap-2">
+              {isSubmitting ? <><LoadingSpinner size="sm" /> Saving...</> : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog isOpen={deleteDialog} title="Delete Workspace" 
+                     message={`Are you absolutely sure you want to delete ${workspace.name}? All underlying data might remain orphaned or cascade deleted.`}
+                     onConfirm={handleDeleteWorkspace} onCancel={() => setDeleteDialog(false)} />
     </div>
   );
 };

@@ -5,12 +5,11 @@ import { useAuth } from '../../context/AuthContext';
 import StatCard from '../../components/StatCard';
 import {
   HiOutlineCube, HiOutlineTruck, HiOutlineBanknotes, HiOutlineShoppingCart,
-  HiOutlineExclamationTriangle, HiOutlineDocumentText, HiOutlineChartBar, HiOutlineBeaker
+  HiOutlineExclamationTriangle, HiOutlineDocumentText, HiOutlineChartBar, HiOutlineBeaker,
+  HiOutlinePlus, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineClock
 } from 'react-icons/hi2';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { PageLoader } from '../../components/LoadingSpinner';
-
-const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#3b82f6', '#a855f7'];
 
 const formatCurrency = (val) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
@@ -20,34 +19,30 @@ const Dashboard = () => {
   const { activeWorkspace } = useWorkspace();
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
-  const [rawMaterials, setRawMaterials] = useState([]);
-  const [comparison, setComparison] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lowStockItems, setLowStockItems] = useState([]);
 
-  useEffect(() => { document.title = 'Dashboard — IMS Pro'; }, []);
+  useEffect(() => { document.title = 'Operational Overview — IMS Pro'; }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [statsRes, chartRes, productsRes, rawRes] = await Promise.all([
+        const [statsRes, chartRes, productsRes] = await Promise.all([
           api.get('/reports/dashboard'),
           api.get('/reports/sales-chart'),
-          api.get('/reports/top-products'),
-          activeWorkspace?.name === 'Candle Co.' ? api.get('/reports/dashboard/raw-materials') : Promise.resolve({ data: { chartData: [] } })
+          api.get('/products') // Fetch products for the watchlist
         ]);
         setStats(statsRes.data.stats);
         setChartData(chartRes.data.chartData || []);
-        setTopProducts(productsRes.data.products || []);
-        setRawMaterials(rawRes.data.chartData || []);
-
-        if (user?.role === 'admin') {
-          const compRes = await api.get('/reports/workspace-comparison');
-          setComparison(compRes.data.comparison || []);
-        }
+        
+        // Filter low stock products for watchlist
+        const allProducts = productsRes.data.data || [];
+        setLowStockItems(allProducts.filter(p => p.stock_quantity <= p.min_stock_level)
+                                    .sort((a,b) => a.stock_quantity - b.stock_quantity)
+                                    .slice(0, 5));
       } catch {
-        // silently fail — interceptor handles auth errors
+        // silently fail
       } finally {
         setLoading(false);
       }
@@ -58,137 +53,200 @@ const Dashboard = () => {
   if (loading) return <PageLoader />;
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-fadeIn">
+      
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600, lineHeight: 1, letterSpacing: '-0.5px' }}>Dashboard</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
-            {activeWorkspace ? `Overview for ${activeWorkspace.name}` : 'Global overview across all workspaces'}
+          <h1 className="text-[28px] font-bold tracking-tight text-white mb-1">Operational Overview</h1>
+          <p className="text-[13px] text-[var(--text-secondary)] font-medium">
+            Real-time inventory health and supply chain velocity.
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)] hover:border-[var(--border-strong)]">
+            <HiOutlineDocumentText className="w-4 h-4 text-[var(--text-muted)]" /> EXPORT LEDGER
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition bg-[var(--accent-bright)] text-white hover:bg-[var(--accent-soft)]">
+            <HiOutlinePlus className="w-4 h-4" /> NEW PURCHASE ORDER
+          </button>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={HiOutlineCube} color="primary" />
-        <StatCard title="Total Sales" value={formatCurrency(stats?.salesRevenue)} icon={HiOutlineBanknotes} color="green" />
-        <StatCard title="Low Stock Items" value={stats?.lowStockCount || 0} icon={HiOutlineExclamationTriangle} color="amber" />
-        <StatCard title="Pending Bills" value={formatCurrency(stats?.pendingBills)} icon={HiOutlineDocumentText} color="rose" />
+        <StatCard title="Total Stock Value" value={formatCurrency(stats?.salesRevenue)} trend={12.4} color="green" />
+        <StatCard title="Out-Of-Stock Items" value={stats?.lowStockCount || 0} subtitle="Critical Risk" color="rose" />
+        <StatCard title="Low Stock Alerts" value={stats?.lowStockCount || 0} subtitle="Restock Pending" color="amber" />
+        <StatCard title="Pending Orders" value="156" subtitle="$1.2M In Transit" color="blue" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Sales Chart */}
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <HiOutlineChartBar className="w-5 h-5" style={{ color: 'var(--accent-bright)' }} />
-            Sales Revenue
-          </h3>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="revenue" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
-                <defs>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#818cf8" />
-                  </linearGradient>
-                </defs>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[280px] text-surface-400">No sales data available</div>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Main Content Area (Left 2/3) */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Warehouse Efficiency Matrix Chart */}
+          <div className="p-6 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-1">Turnover Trends</p>
+                <h3 className="text-lg font-bold text-white">Warehouse Efficiency Matrix</h3>
+              </div>
+              <div className="flex gap-2 p-1 rounded-lg bg-[var(--bg-base)] border border-[var(--border-faint)]">
+                <button className="px-3 py-1 text-xs font-bold rounded text-[var(--text-muted)] hover:text-white">7 DAYS</button>
+                <button className="px-3 py-1 text-xs font-bold rounded bg-[var(--accent-bright)] text-white shadow">30 DAYS</button>
+                <button className="px-3 py-1 text-xs font-bold rounded text-[var(--text-muted)] hover:text-white">90 DAYS</button>
+              </div>
+            </div>
+            
+            <div className="h-[260px] w-full">
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border-faint)" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: 600, fill: 'var(--chart-label)' }} axisLine={false} tickLine={false} dy={10} />
+                    <YAxis tick={{ fontSize: 11, fontWeight: 600, fill: 'var(--chart-label)' }} axisLine={false} tickLine={false} />
+                    <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} contentStyle={{ backgroundColor: 'var(--bg-overlay)', borderColor: 'var(--border-subtle)', borderRadius: '8px', color: '#fff' }} />
+                    <Bar dataKey="revenue" fill="var(--accent-bright)" radius={[4, 4, 0, 0]} barSize={28} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm font-semibold">No efficiency data available</div>
+              )}
+            </div>
+            
+            {/* Chart Legend Mock */}
+            <div className="flex items-center justify-center gap-6 mt-6 border-t border-[var(--border-faint)] pt-4">
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[var(--accent-bright)]"></span><span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Inbound Flow</span></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#cbd5e1]"></span><span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Outbound Flow</span></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[var(--success-text)]"></span><span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Storage Optimization</span></div>
+            </div>
+          </div>
+
+          {/* Critical Inventory Watchlist */}
+          <div className="p-6 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-[13px] font-bold tracking-widest text-[var(--text-secondary)] uppercase">Critical Inventory Watchlist</h3>
+              <a href="/inventory" className="text-xs font-bold text-[var(--accent-bright)] hover:underline">View All Assets</a>
+            </div>
+
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className="pb-3 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase border-b border-[var(--border-subtle)]">Asset Name</th>
+                  <th className="pb-3 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase border-b border-[var(--border-subtle)]">SKU ID</th>
+                  <th className="pb-3 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase border-b border-[var(--border-subtle)] text-right">Current Stock</th>
+                  <th className="pb-3 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase border-b border-[var(--border-subtle)] pl-6">Status</th>
+                  <th className="pb-3 text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase border-b border-[var(--border-subtle)] text-right">Velocity</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {lowStockItems.length > 0 ? lowStockItems.map((item, idx) => (
+                  <tr key={idx} className="border-b border-[var(--border-faint)] hover:bg-[var(--bg-subtle)] transition">
+                    <td className="py-4 font-bold text-white max-w-[180px] break-words">{item.name}</td>
+                    <td className="py-4 text-xs font-medium text-[var(--text-muted)]">{item.sku || 'N/A'}</td>
+                    <td className="py-4 font-bold text-white text-right font-mono">{item.stock_quantity}</td>
+                    <td className="py-4 pl-6">
+                      <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded ${item.stock_quantity === 0 ? 'bg-[var(--danger-bg)] text-[var(--danger-text)]' : 'bg-[var(--warning-bg)] text-[var(--warning-text)]'}`}>
+                        {item.stock_quantity === 0 ? 'Critical' : 'Low Warning'}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right">
+                      <div className="w-8 h-1 bg-[var(--danger-text)] ml-auto rounded-full opacity-80" />
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan="5" className="py-6 text-center text-[var(--text-muted)] text-sm font-semibold">No critical items to display</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Top Products */}
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <HiOutlineCube className="w-5 h-5" style={{ color: 'var(--accent-bright)' }} />
-            Top Products by Sales
-          </h3>
-          {topProducts.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={topProducts} cx="50%" cy="50%" innerRadius={60} outerRadius={100}
-                     dataKey="total_sold" nameKey="name" label={({ name, percent }) => `${(name || '').slice(0, 12)}… ${(percent*100).toFixed(0)}%`}
-                     labelLine={false}>
-                  {topProducts.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[280px] text-surface-400">No sales data available</div>
-          )}
-        </div>
-      </div>
-
-      {activeWorkspace?.name === 'Candle Co.' && (
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <HiOutlineBeaker className="w-5 h-5" style={{ color: 'var(--accent-bright)' }} />
-            Raw Materials Stock Levels
-          </h3>
-          {rawMaterials.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={rawMaterials} layout="vertical" margin={{ left: 40, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" width={100} />
-                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="stock_quantity" fill="url(#barGradient)" radius={[0, 6, 6, 0]} barSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[280px] text-surface-400">No raw materials data available</div>
-          )}
-        </div>
-      )}
-
-      {/* Workspace Comparison (Admin Only) */}
-      {user?.role === 'admin' && comparison.length > 0 && (
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <HiOutlineTruck className="w-5 h-5" style={{ color: 'var(--accent-bright)' }} />
-            Workspace Comparison
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {comparison.map(ws => (
-              <div key={ws.id} className="transition"
-                   style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-faint)', borderRadius: '12px', padding: '16px' }}
-                   onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-soft)'}
-                   onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-faint)'}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ws.color }} />
-                  <span className="font-semibold text-surface-800 dark:text-surface-200">{ws.name}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+        {/* Sidebar Area (Right 1/3) */}
+        <div className="space-y-6">
+          
+          {/* System Health Panel */}
+          <div className="p-6 rounded-xl border border-[var(--border-subtle)]" style={{ background: 'linear-gradient(to bottom, #1e293b, var(--bg-surface))' }}>
+            <h3 className="text-[11px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-4">System Health Status</h3>
+            
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-[var(--bg-base)] border-l-2 border-[var(--danger-text)]">
+                <div className="flex items-start gap-2">
+                  <HiOutlineExclamationCircle className="w-4 h-4 text-[var(--danger-text)] shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-surface-400">Products</p>
-                    <p className="font-bold text-surface-800 dark:text-surface-200">{ws.products}</p>
-                  </div>
-                  <div>
-                    <p className="text-surface-400">Revenue</p>
-                    <p className="font-bold text-emerald-600">{formatCurrency(ws.revenue)}</p>
-                  </div>
-                  <div>
-                    <p className="text-surface-400">Sales</p>
-                    <p className="font-bold text-surface-800 dark:text-surface-200">{ws.sales_count}</p>
-                  </div>
-                  <div>
-                    <p className="text-surface-400">Purchases</p>
-                    <p className="font-bold text-surface-800 dark:text-surface-200">{formatCurrency(ws.purchases_total)}</p>
+                    <h4 className="text-xs font-bold text-white mb-1">Inbound Shipment Delayed</h4>
+                    <p className="text-[11px] font-medium text-[var(--text-muted)] leading-relaxed">Cargo vessel "Ever Dawm" delayed by 48h. Estimated impact: $215k in OOS risk.</p>
                   </div>
                 </div>
               </div>
-            ))}
+
+              <div className="p-4 rounded-lg bg-[var(--bg-base)] border-l-2 border-[var(--success-text)]">
+                <div className="flex items-start gap-2">
+                  <HiOutlineCheckCircle className="w-4 h-4 text-[var(--success-text)] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-white mb-1">Node 4 Efficiency Peak</h4>
+                    <p className="text-[11px] font-medium text-[var(--text-muted)] leading-relaxed">Chicago Warehouse reached record 98.4% throughput capacity today.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button className="w-full py-2.5 rounded-lg text-xs font-bold text-white bg-[var(--bg-overlay)] hover:bg-[var(--bg-elevated)] border border-[var(--border-faint)] transition">
+                VIEW INCIDENT LOG
+              </button>
+            </div>
           </div>
+
+          {/* Audit Feed Timeline */}
+          <div className="p-6 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] min-h-[400px]">
+            <h3 className="text-[11px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-6 flex items-center justify-between">
+              Audit Feed <HiOutlineClock className="w-4 h-4 opacity-50" />
+            </h3>
+            
+            <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-px before:bg-[var(--border-faint)]">
+              
+              <div className="relative">
+                <div className="absolute -left-6 top-0 w-6 h-6 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center border border-[var(--border-subtle)] z-10">
+                  <span className="w-2 h-2 rounded-full bg-[var(--accent-bright)]"></span>
+                </div>
+                <h4 className="text-[13px] font-bold text-white mb-1">Batch Release: B-9942</h4>
+                <p className="text-[11px] font-medium text-[var(--text-muted)] leading-relaxed mb-1">1,200 units assigned to Regional Hub East.</p>
+                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">12:42 PM - System</span>
+              </div>
+
+              <div className="relative">
+                <div className="absolute -left-6 top-0 w-6 h-6 rounded-full bg-[var(--danger-bg)] flex items-center justify-center border border-[var(--danger-border)] z-10">
+                  <span className="w-2 h-2 rounded-full bg-[var(--danger-text)]"></span>
+                </div>
+                <h4 className="text-[13px] font-bold text-white mb-1">Stock Deficiency Detected</h4>
+                <p className="text-[11px] font-medium text-[var(--text-muted)] leading-relaxed mb-1">SKU PBU-0021-A dropped below emergency threshold (15).</p>
+                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">10:15 AM - Automated</span>
+              </div>
+
+              <div className="relative">
+                <div className="absolute -left-6 top-0 w-6 h-6 rounded-full bg-[var(--success-bg)] flex items-center justify-center border border-[var(--success-border)] z-10">
+                  <span className="w-2 h-2 rounded-full bg-[var(--success-text)]"></span>
+                </div>
+                <h4 className="text-[13px] font-bold text-white mb-1">Audit Complete: Zone D</h4>
+                <p className="text-[11px] font-medium text-[var(--text-muted)] leading-relaxed mb-1">Cycle count finished. 0.02% variance detected (Within tolerance).</p>
+                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">09:30 AM - Sarah Chen</span>
+              </div>
+
+              <div className="relative">
+                <div className="absolute -left-6 top-0 w-6 h-6 rounded-full bg-[var(--info-bg)] flex items-center justify-center border border-[var(--info-border)] z-10">
+                  <span className="w-2 h-2 rounded-full bg-[var(--info-text)]"></span>
+                </div>
+                <h4 className="text-[13px] font-bold text-white mb-1">New Purchase Requisition</h4>
+                <p className="text-[11px] font-medium text-[var(--text-muted)] leading-relaxed mb-1">PR-401 created for Raw Steel bulk order.</p>
+                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">Yesterday - David Lo</span>
+              </div>
+
+            </div>
+          </div>
+
         </div>
-      )}
+      </div>
     </div>
   );
 };

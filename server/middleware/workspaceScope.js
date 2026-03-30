@@ -44,9 +44,14 @@ const workspaceScope = async (req, res, next) => {
     // Forcefully scope non-admins to their assigned workspace to prevent tampering
     req.workspaceId = rows[0].workspace_id;
     req.workspaceAccess = rows[0].access_level;
+    
+    // Explicit read-only enforcement
+    if (req.workspaceAccess === 'read_only' && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      return res.status(403).json({ message: 'Forbidden. Read-only access to this workspace.' });
+    }
+
     next();
   } catch (error) {
-    console.error('Workspace scope error:', error);
     res.status(500).json({ message: 'Internal server error.' });
   }
 };

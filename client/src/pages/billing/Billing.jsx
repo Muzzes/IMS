@@ -143,7 +143,7 @@ const Billing = () => {
       {/* Detail Modal */}
       <Modal isOpen={!!viewing && !payModal} onClose={() => setViewing(null)} title={`Bill Summary — ${viewing?.bill_number || ''}`} size="lg">
         {viewing && (
-          <div className="space-y-6 print-area bg-white dark:bg-transparent text-surface-900 dark:text-inherit">
+          <div className="space-y-6 print-area text-white">
             <div className="flex justify-end print:hidden">
               <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition"
                       style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-faint)' }}>

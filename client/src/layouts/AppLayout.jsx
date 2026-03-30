@@ -2,17 +2,20 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { useIdleTimeout } from '../hooks/useIdleTimeout';
 import WorkspaceSwitcher from '../components/WorkspaceSwitcher';
+import UnverifiedBanner from '../components/UnverifiedBanner';
 import {
   HiOutlineHome, HiOutlineCube, HiOutlineTruck, HiOutlineShoppingCart,
   HiOutlineBanknotes, HiOutlineDocumentText, HiOutlineChartBar,
-  HiOutlineBell, HiOutlineCog6Tooth, HiOutlineSun, HiOutlineMoon,
+  HiOutlineBell, HiOutlineCog6Tooth,
   HiOutlineBars3, HiOutlineXMark, HiOutlineArrowRightOnRectangle,
   HiOutlineBuildingStorefront, HiOutlineBeaker, HiOutlineUsers,
-  HiOutlineArchiveBox, HiOutlineWrenchScrewdriver
+  HiOutlineArchiveBox, HiOutlineWrenchScrewdriver, HiOutlineEnvelope,
+  HiOutlineAdjustmentsHorizontal
 } from 'react-icons/hi2';
+import { HiMagnifyingGlass } from 'react-icons/hi2';
 
 const navItems = [
   { label: 'Dashboard',     path: '/',             icon: HiOutlineHome,          roles: ['admin', 'staff', 'manufacturer'] },
@@ -21,33 +24,33 @@ const navItems = [
   { label: 'Suppliers',     path: '/suppliers',    icon: HiOutlineTruck,         roles: ['admin', 'staff'] },
   { label: 'Purchases',     path: '/purchases',    icon: HiOutlineShoppingCart,  roles: ['admin', 'staff'] },
   { label: 'Sales',         path: '/sales',        icon: HiOutlineBanknotes,     roles: ['admin', 'staff'] },
-  { label: 'Billing',       path: '/billing',      icon: HiOutlineDocumentText,  roles: ['admin', 'staff'] },
   { label: 'Reports',       path: '/reports',      icon: HiOutlineChartBar,      roles: ['admin', 'staff'] },
-  { label: 'Notifications', path: '/notifications', icon: HiOutlineBell,        roles: ['admin', 'staff', 'manufacturer'] },
   { type: 'divider', roles: ['admin'] },
   { label: 'Workspaces',    path: '/settings/workspaces', icon: HiOutlineBuildingStorefront, roles: ['admin'] },
   { label: 'Users',         path: '/settings/users',      icon: HiOutlineUsers,              roles: ['admin'] },
-  { label: 'Settings',      path: '/settings/system',     icon: HiOutlineWrenchScrewdriver,  roles: ['admin'] },
+  { label: 'Email Logs',    path: '/settings/email-logs', icon: HiOutlineEnvelope,           roles: ['admin'] },
+  { type: 'divider', roles: ['admin', 'staff', 'manufacturer'] },
+  { label: 'Email Prefs',   path: '/settings/notifications', icon: HiOutlineAdjustmentsHorizontal, roles: ['admin', 'staff', 'manufacturer'] },
 ];
 
 const AppLayout = () => {
+  useIdleTimeout(30 * 60 * 1000); // 30 mins
+  
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
   const { activeWorkspace } = useWorkspace();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
   const handleLogout = () => {
     logout();
-    // logout() already calls window.location.replace('/login')
   };
 
   const filtered = navItems.filter(item => item.roles.includes(user?.role));
   
   if (activeWorkspace?.name === 'Candle Co.') {
     const rmLink = { label: 'Raw Materials', path: '/raw-materials', icon: HiOutlineBeaker, roles: ['admin', 'staff', 'manufacturer'] };
-    const notifIdx = filtered.findIndex(i => i.path === '/notifications');
-    if (notifIdx !== -1) filtered.splice(notifIdx, 0, rmLink);
+    const idx = filtered.findIndex(i => i.path === '/suppliers');
+    if (idx !== -1) filtered.splice(idx + 1, 0, rmLink);
     else filtered.push(rmLink);
   }
 
@@ -58,33 +61,31 @@ const AppLayout = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Precision Engine Style */}
       <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 flex flex-col transition-transform duration-300
                          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
-             style={{ background: 'var(--bg-base)', borderRight: '1px solid var(--border-faint)' }}>
+             style={{ background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border-subtle)' }}>
+        
         {/* Logo */}
-        <div className="px-5 py-5" style={{ borderBottom: '1px solid var(--border-faint)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: 'var(--accent-bright)', color: '#fff' }}>
-              <HiOutlineCube className="w-5 h-5 flex-shrink-0" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>IMS Pro</h1>
-              <p className="font-medium tracking-wider uppercase" style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Inventory System</p>
-            </div>
+        <div className="px-6 py-6" style={{ borderBottom: '1px solid var(--border-faint)' }}>
+          <h1 className="text-xl font-bold tracking-tight text-white mb-1">IMS Pro</h1>
+          <div className="inline-flex items-center">
+            <span className="text-[10px] font-bold tracking-widest text-[#93c5fd] uppercase" style={{ letterSpacing: '0.1em' }}>
+              V2.4 OPERATIONAL
+            </span>
           </div>
         </div>
 
         {/* Workspace Switcher */}
-        <div className="pt-4">
+        <div className="pt-4 px-2">
           <WorkspaceSwitcher />
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto px-2 pb-4 mt-2 space-y-1">
           {filtered.map((item, i) => {
             if (item.type === 'divider') {
-              return <div key={i} className="my-3" style={{ borderTop: '1px solid var(--border-faint)' }} />;
+              return <div key={i} className="my-4 mx-4" style={{ borderTop: '1px solid var(--border-faint)' }} />;
             }
             return (
               <NavLink
@@ -92,98 +93,104 @@ const AppLayout = () => {
                 to={item.path}
                 end={item.path === '/'}
                 onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-r-xl text-sm font-medium transition-all duration-200 nav-item group ${isActive ? 'active-nav' : ''}`}
+                className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 nav-item group ${isActive ? 'active-nav' : ''}`}
                 style={({ isActive }) => ({
-                  color: isActive ? '#f9fafb' : 'var(--text-secondary)',
-                  background: isActive ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
-                  borderLeft: isActive ? '3px solid var(--accent-bright)' : '3px solid transparent',
+                  color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                  background: isActive ? 'var(--bg-subtle)' : 'transparent',
+                  borderLeft: isActive ? '3px solid var(--accent-soft)' : '3px solid transparent',
+                  fontWeight: isActive ? 600 : 500
                 })}
                 onMouseEnter={e => {
                   if(!e.currentTarget.classList.contains('active-nav')){
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                    e.currentTarget.style.color = 'var(--text-primary)';
-                    e.currentTarget.style.borderLeftColor = 'var(--border-strong)';
+                    e.currentTarget.style.color = '#ffffff';
                   }
                 }}
                 onMouseLeave={e => {
                   if(!e.currentTarget.classList.contains('active-nav')){
-                    e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.color = 'var(--text-secondary)';
-                    e.currentTarget.style.borderLeftColor = 'transparent';
                   }
                 }}
-                id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
               >
-                <item.icon className="w-5 h-5 shrink-0" style={{ stroke: 'currentColor' }} />
+                <item.icon className="w-[18px] h-[18px] shrink-0" style={{ strokeWidth: 2 }} />
                 <span>{item.label}</span>
               </NavLink>
             );
           })}
         </nav>
 
-        {/* User section */}
-        <div className="p-3" style={{ borderTop: '1px solid var(--border-faint)' }}>
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                 style={{ background: 'rgba(129,140,248,0.15)', color: '#a5b4fc', border: '1px solid rgba(129,140,248,0.3)' }}>
-              {user?.name?.charAt(0)?.toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium truncate" style={{ color: '#c8c6f7' }}>{user?.name}</p>
-              <p className="text-[11px] font-medium" style={{ color: '#6868a8' }}>{user?.role}</p>
-            </div>
-          </div>
+        {/* Bottom Sidebar - Logout */}
+        <div className="p-4" style={{ borderTop: '1px solid var(--border-faint)' }}>
+          <button onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#ffffff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+            <HiOutlineArrowRightOnRectangle className="w-5 h-5 rotate-180" />
+            <span className="uppercase tracking-wider text-[11px]">Logout</span>
+          </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col bg-[var(--bg-base)]">
+        <UnverifiedBanner />
+        
         {/* Topbar */}
-        <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-4 lg:px-6 backdrop-blur-md"
-                style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border-faint)' }}>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2 rounded-lg nav-item transition"
-                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)', color: 'var(--text-secondary)' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-overlay)'; e.currentTarget.style.borderColor = 'var(--border-subtle)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.borderColor = 'var(--border-faint)' }}
-                    id="sidebar-toggle">
+        <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-4 lg:px-8 backdrop-blur-md"
+                style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border-subtle)' }}>
+          
+          <div className="flex items-center gap-4 flex-1">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2 rounded-lg text-[var(--text-secondary)]">
               {sidebarOpen ? <HiOutlineXMark className="w-5 h-5" /> : <HiOutlineBars3 className="w-5 h-5" />}
             </button>
-            {activeWorkspace && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--bg-subtle)' }}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: activeWorkspace.color }} />
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{activeWorkspace.name}</span>
-              </div>
-            )}
+
+            {/* Global Search - Mockup style */}
+            <div className="hidden md:flex items-center w-full max-w-md relative">
+              <HiMagnifyingGlass className="absolute left-3 w-4 h-4 text-[var(--text-muted)]" />
+              <input type="text"
+                     placeholder="Global SKU or Batch Search..."
+                     className="w-full pl-9 pr-4 py-2 text-sm bg-transparent border-none outline-none text-[var(--text-primary)] transition-all"
+                     style={{
+                       background: 'var(--bg-elevated)',
+                       borderRadius: '8px'
+                     }}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme}
-                    className="p-2.5 rounded-lg nav-item transition"
-                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)', color: 'var(--text-secondary)' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-overlay)'; e.currentTarget.style.borderColor = 'var(--border-subtle)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.borderColor = 'var(--border-faint)' }}
-                    id="theme-toggle">
-              {isDark ? <HiOutlineSun className="w-5 h-5" style={{ color: 'var(--warning-text)' }} /> : <HiOutlineMoon className="w-5 h-5" />}
-            </button>
-            <button onClick={handleLogout}
-                    className="p-2.5 rounded-lg nav-item transition"
-                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)', color: 'var(--danger-text)' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.borderColor = 'var(--danger-border)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.borderColor = 'var(--border-faint)' }}
-                    id="logout-btn">
-              <HiOutlineArrowRightOnRectangle className="w-5 h-5" />
-            </button>
+          <div className="flex items-center gap-4">
+            <div className="flex gap-2">
+              <NavLink to="/notifications" className={({ isActive }) => `p-2 rounded-lg transition border border-transparent ${isActive ? 'text-white bg-[var(--bg-subtle)] border border-[var(--border-subtle)]' : 'text-[var(--text-secondary)] hover:text-white'}`}>
+                <HiOutlineBell className="w-5 h-5" />
+              </NavLink>
+              {user?.role === 'admin' && (
+                <NavLink to="/settings/system" className={({ isActive }) => `p-2 rounded-lg transition border border-transparent ${isActive ? 'text-white bg-[var(--bg-subtle)] border border-[var(--border-subtle)]' : 'text-[var(--text-secondary)] hover:text-white'}`}>
+                  <HiOutlineCog6Tooth className="w-5 h-5" />
+                </NavLink>
+              )}
+            </div>
+            
+            {/* User Profile */}
+            <div className="flex items-center gap-3 pl-4 border-l border-[var(--border-subtle)]">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">{user?.name}</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-secondary)]">{user?.role}</p>
+              </div>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white bg-[var(--accent-bright)]">
+                {user?.name?.charAt(0)?.toUpperCase()}
+              </div>
+            </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6" style={{ background: 'var(--bg-base)' }}>
+        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: 0.2 }}
+            className="max-w-7xl mx-auto"
           >
             <Outlet />
           </motion.div>

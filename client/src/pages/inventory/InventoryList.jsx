@@ -12,7 +12,9 @@ import { PageLoader } from '../../components/LoadingSpinner';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import {
   HiOutlinePencilSquare, HiOutlineArrowPath, HiOutlineAdjustmentsHorizontal,
-  HiOutlineCheck, HiOutlineXMark, HiOutlineTrash, HiPlusCircle
+  HiOutlineCheck, HiOutlineXMark, HiOutlineTrash, HiPlusCircle,
+  HiOutlineFunnel, HiOutlineArrowDownTray,
+  HiOutlineArrowTrendingUp, HiOutlineBuildingStorefront, HiOutlineExclamationCircle, HiOutlineInboxArrowDown
 } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 
@@ -20,9 +22,9 @@ const formatCurrency = (val) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
 
 const getStockStatus = (qty, threshold) => {
-  if (qty <= 0) return { label: 'Out of Stock', variant: 'danger' };
-  if (qty <= threshold) return { label: 'Low Stock', variant: 'warning' };
-  return { label: 'Healthy', variant: 'success' };
+  if (qty <= 0) return { label: 'CRITICAL', variant: 'danger' };
+  if (qty <= threshold) return { label: 'LOW STOCK', variant: 'warning' };
+  return { label: 'STABLE', variant: 'success' };
 };
 
 const InventoryList = () => {
@@ -30,6 +32,9 @@ const InventoryList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Multi-selection (Mockup shows checkboxes)
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Inline editing
   const [inlineEditId, setInlineEditId] = useState(null);
@@ -58,7 +63,7 @@ const InventoryList = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => { document.title = 'Inventory — IMS Pro'; }, []);
+  useEffect(() => { document.title = 'Central Inventory Repository — IMS Pro'; }, []);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -75,12 +80,21 @@ const InventoryList = () => {
     .filter(p => {
       if (filterStatus === 'all') return true;
       const status = getStockStatus(p.stock_quantity, p.min_stock_level);
-      if (filterStatus === 'healthy') return status.label === 'Healthy';
-      if (filterStatus === 'low') return status.label === 'Low Stock';
-      if (filterStatus === 'out') return status.label === 'Out of Stock';
+      if (filterStatus === 'healthy') return status.label === 'STABLE';
+      if (filterStatus === 'low') return status.label === 'LOW STOCK';
+      if (filterStatus === 'out') return status.label === 'CRITICAL';
       return true;
     })
     .sort((a, b) => a.stock_quantity - b.stock_quantity);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredProducts.length) setSelectedIds([]);
+    else setSelectedIds(filteredProducts.map(p => p.id));
+  };
+  const toggleSelect = (id) => {
+    if (selectedIds.includes(id)) setSelectedIds(selectedIds.filter(i => i !== id));
+    else setSelectedIds([...selectedIds, id]);
+  };
 
   // Inline edit handlers
   const startInlineEdit = (productId, field, currentValue) => {
@@ -239,7 +253,6 @@ const InventoryList = () => {
     if (itemErrors[name]) setItemErrors(prev => ({ ...prev, [name]: null }));
   };
 
-  // ── Delete handler ──
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -255,55 +268,81 @@ const InventoryList = () => {
 
   if (loading) return <PageLoader />;
 
-  const statusTabs = [
-    { key: 'all', label: 'All', count: products.length },
-    { key: 'healthy', label: 'Healthy', count: products.filter(p => getStockStatus(p.stock_quantity, p.min_stock_level).label === 'Healthy').length },
-    { key: 'low', label: 'Low Stock', count: products.filter(p => getStockStatus(p.stock_quantity, p.min_stock_level).label === 'Low Stock').length },
-    { key: 'out', label: 'Out of Stock', count: products.filter(p => p.stock_quantity <= 0).length },
-  ];
-
   return (
-    <div className="space-y-4 animate-fadeIn">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-fadeIn">
+      
+      {/* 1. Header Section */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div>
-          <h1 style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600, lineHeight: 1, letterSpacing: '-0.5px' }}>Inventory</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>{filteredProducts.length} items</p>
+          <h1 className="text-[28px] font-bold tracking-tight text-white mb-2">Central Inventory Repository</h1>
+          <p className="text-[13px] text-[var(--text-secondary)] font-medium max-w-2xl">
+            Real-time tracking and logistics management for global asset distribution.
+          </p>
         </div>
-        {lowItems.length > 0 && (
-          <button onClick={openBulkModal}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)', border: '1px solid var(--warning-text)' }}>
-            <HiOutlineArrowPath className="w-4 h-4" /> Bulk Update ({lowItems.length})
-          </button>
-        )}
-          <button onClick={openAddItem} className="btn-primary flex items-center gap-2">
-            <HiPlusCircle className="w-5 h-5" /> Add Item
-          </button>
+        
+        {/* Top Stats */}
+        <div className="flex items-center gap-6 pb-2">
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-1">TOTAL ASSETS</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-white">{products.reduce((acc, p) => acc + p.stock_quantity, 0).toLocaleString()}</span>
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[var(--success-bg)] text-[var(--success-text)] rounded">+4.2%</span>
+            </div>
+          </div>
+          <div className="w-px h-10 bg-[var(--border-subtle)]"></div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-1">CRITICAL STOCK</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-[var(--danger-text)]">{products.filter(p => p.stock_quantity <= 0).length}</span>
+              <span className="text-[10px] font-bold text-[var(--danger-text)]">Action Required</span>
+            </div>
+          </div>
+          <div className="w-px h-10 bg-[var(--border-subtle)]"></div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-1">ACTIVE SHIPMENTS</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">142</span>
+              <span className="text-[10px] font-bold text-[var(--info-text)]">In Transit</span>
+            </div>
+          </div>
         </div>
-
-      {/* Status Filter Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-faint)' }}>
-        {statusTabs.map(tab => (
-          <button key={tab.key} onClick={() => setFilterStatus(tab.key)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                  style={{
-                    background: filterStatus === tab.key ? 'var(--bg-overlay)' : 'transparent',
-                    color: filterStatus === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
-                    border: filterStatus === tab.key ? '1px solid var(--border-subtle)' : '1px solid transparent',
-                  }}>
-            {tab.label} <span className="ml-1 opacity-60">({tab.count})</span>
-          </button>
-        ))}
       </div>
 
-      {/* Inventory Table */}
-      <div className="overflow-x-auto rounded-[12px]" style={{ border: '1px solid var(--border-faint)' }}>
-        <table className="w-full text-sm" style={{ background: 'transparent' }}>
+      {/* 2. Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+        <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold transition rounded-lg"
+                style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-faint)' }}>
+          <HiOutlineFunnel className="w-4 h-4" /> Advanced Filters
+        </button>
+        
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase">BULK ACTIONS:</span>
+          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white transition rounded-lg hover:brightness-110"
+                  style={{ background: 'var(--accent-bright)' }} onClick={openBulkModal}>
+            Restock Selected
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold transition rounded-lg"
+                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}>
+            <HiOutlineArrowDownTray className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={openAddItem} className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white transition rounded-lg hover:bg-[var(--accent-soft)] shadow-lg"
+                  style={{ background: 'linear-gradient(to right, #2563eb, #1d4ed8)' }}>
+            <HiPlusCircle className="w-4 h-4" /> Register New Item
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Main Data Table */}
+      <div className="overflow-x-auto rounded-[12px] pb-4" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+        <table className="w-full text-sm text-left border-collapse">
           <thead>
-            <tr style={{ background: 'var(--bg-subtle)' }}>
-              {['Product', 'SKU', 'Category', 'Price', 'In Stock', 'Threshold', 'Status', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-3 text-left whitespace-nowrap uppercase font-semibold"
-                    style={{ color: 'var(--text-secondary)', fontSize: '11px', letterSpacing: '0.6px', borderBottom: '1px solid var(--border-subtle)' }}>
+            <tr>
+              <th className="px-4 py-4 w-12 border-b-2 border-[var(--bg-muted)]">
+                <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={toggleSelectAll}
+                       className="w-4 h-4 rounded border-[var(--border-strong)] bg-transparent checked:bg-[var(--accent-bright)]" />
+              </th>
+              {['Item Name & ID', 'SKU', 'Category', 'Current Stock', 'Unit Price', 'Supplier', 'Status', 'Actions'].map((h, i) => (
+                <th key={h} className={`px-4 py-4 text-[10px] font-bold tracking-wider text-[var(--text-secondary)] uppercase border-b-2 border-[var(--bg-muted)] ${i === 3 || i === 4 ? 'text-right' : ''}`}>
                   {h}
                 </th>
               ))}
@@ -312,77 +351,63 @@ const InventoryList = () => {
           <tbody>
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center" style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>
+                <td colSpan={9} className="px-4 py-12 text-center text-[var(--text-muted)] font-semibold text-sm">
                   No inventory items found.
                 </td>
               </tr>
             ) : filteredProducts.map((p, i) => {
               const status = getStockStatus(p.stock_quantity, p.min_stock_level);
+              const isSelected = selectedIds.includes(p.id);
               const isEditingStock = inlineEditId === p.id && inlineEditField === 'stock';
-              const isEditingThreshold = inlineEditId === p.id && inlineEditField === 'threshold';
               return (
-                <tr key={p.id} className="table-row-hover" style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
-                    <span className="font-semibold">{p.name}</span>
+                <tr key={p.id} className={`transition group ${isSelected ? 'bg-[var(--accent-deep)]' : 'hover:bg-[var(--bg-subtle)]'}`} style={{ borderBottom: '1px solid var(--border-faint)' }}>
+                  <td className="px-4 py-4">
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(p.id)}
+                           className="w-4 h-4 rounded border-[var(--border-strong)] bg-transparent checked:bg-[var(--accent-bright)]" />
                   </td>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>{p.sku}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>{p.category}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>{formatCurrency(p.unit_price)}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td className="px-4 py-4 font-bold text-white max-w-[200px] break-words">
+                    <div className="leading-tight">
+                      {p.name}
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono font-medium mt-1 uppercase tracking-wider">ID: INV-{p.id.toString().padStart(5, '0')}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="px-2 py-1 text-[10px] font-bold font-mono tracking-widest uppercase text-[var(--text-primary)] rounded" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-faint)' }}>
+                      {p.sku || 'N/A'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-[12px] font-semibold text-[var(--text-secondary)]">{p.category}</td>
+                  <td className="px-4 py-4 text-right">
                     {isEditingStock ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-end gap-1">
                         <input type="number" min="0" value={inlineValue} onChange={e => setInlineValue(e.target.value)} onKeyDown={handleInlineKeyDown}
-                               autoFocus className="w-20 px-2 py-1 text-sm rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+                               autoFocus className="w-16 px-2 py-1 text-sm rounded outline-none font-mono font-bold"
                                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-bright)', color: 'var(--text-primary)' }} />
-                        <button onClick={saveInlineEdit} className="p-1 rounded" style={{ color: 'var(--success-text)' }}><HiOutlineCheck className="w-4 h-4" /></button>
-                        <button onClick={cancelInlineEdit} className="p-1 rounded" style={{ color: 'var(--danger-text)' }}><HiOutlineXMark className="w-4 h-4" /></button>
+                        <button onClick={saveInlineEdit} className="p-1 text-[var(--success-text)] hover:bg-[var(--success-bg)] rounded"><HiOutlineCheck className="w-4 h-4" /></button>
+                        <button onClick={cancelInlineEdit} className="p-1 text-[var(--danger-text)] hover:bg-[var(--danger-bg)] rounded"><HiOutlineXMark className="w-4 h-4" /></button>
                       </div>
                     ) : (
                       <span onClick={() => startInlineEdit(p.id, 'stock', p.stock_quantity)}
-                            className="cursor-pointer px-2 py-1 rounded-lg transition font-semibold"
-                            style={{ color: status.variant === 'danger' ? 'var(--danger-text)' : status.variant === 'warning' ? 'var(--warning-text)' : 'var(--success-text)' }}
-                            title="Click to edit">
-                        {p.stock_quantity}
+                            className={`cursor-pointer px-2 py-1 text-[13px] font-mono font-bold rounded hover:bg-[var(--bg-elevated)] transition ${status.variant === 'danger' ? 'text-[var(--danger-text)]' : 'text-white'}`}
+                            title="Click to edit stock">
+                        {p.stock_quantity.toLocaleString()}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    {isEditingThreshold ? (
-                      <div className="flex items-center gap-1">
-                        <input type="number" min="0" value={inlineValue} onChange={e => setInlineValue(e.target.value)} onKeyDown={handleInlineKeyDown}
-                               autoFocus className="w-20 px-2 py-1 text-sm rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
-                               style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-bright)', color: 'var(--text-primary)' }} />
-                        <button onClick={saveInlineEdit} className="p-1 rounded" style={{ color: 'var(--success-text)' }}><HiOutlineCheck className="w-4 h-4" /></button>
-                        <button onClick={cancelInlineEdit} className="p-1 rounded" style={{ color: 'var(--danger-text)' }}><HiOutlineXMark className="w-4 h-4" /></button>
-                      </div>
-                    ) : (
-                      <span onClick={() => startInlineEdit(p.id, 'threshold', p.min_stock_level)}
-                            className="cursor-pointer px-2 py-1 rounded-lg transition" style={{ color: 'var(--text-muted)' }} title="Click to edit">
-                        {p.min_stock_level}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td className="px-4 py-4 text-right text-[13px] font-bold text-white font-mono">{formatCurrency(p.unit_price)}</td>
+                  <td className="px-4 py-4 text-[12px] font-semibold text-[var(--text-secondary)]">{p.supplier_name || 'Global Core Industries'}</td>
+                  <td className="px-4 py-4">
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </td>
-                  <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => openAdjustModal(p)}
-                              className="p-1.5 rounded-lg transition"
-                              style={{ color: 'var(--text-secondary)' }}
-                              title="Adjust Stock">
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition">
+                      <button onClick={() => openAdjustModal(p)} className="p-1.5 rounded hover:bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-white" title="Adjust Stock">
                         <HiOutlineAdjustmentsHorizontal className="w-4 h-4" />
                       </button>
-                      <button onClick={() => openEditItem(p)}
-                              className="p-1.5 rounded-lg transition"
-                              style={{ color: 'var(--text-accent)' }}
-                              title="Edit Item">
+                      <button onClick={() => openEditItem(p)} className="p-1.5 rounded hover:bg-[var(--bg-elevated)] text-[var(--text-accent)] hover:text-white" title="Edit Item">
                         <HiOutlinePencilSquare className="w-4 h-4" />
                       </button>
-                      <button onClick={() => setDeleteTarget(p)}
-                              className="p-1.5 rounded-lg transition"
-                              style={{ color: 'var(--danger-text)' }}
-                              title="Delete Item">
+                      <button onClick={() => setDeleteTarget(p)} className="p-1.5 rounded hover:bg-[var(--danger-bg)] text-[var(--danger-text)]" title="Delete Item">
                         <HiOutlineTrash className="w-4 h-4" />
                       </button>
                     </div>
@@ -392,6 +417,67 @@ const InventoryList = () => {
             })}
           </tbody>
         </table>
+        
+        {/* Pagination/Status footer */}
+        <div className="flex items-center justify-between px-6 pt-4 mt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)]">SHOWING 1-{filteredProducts.length} OF {products.length} ITEMS</p>
+          <div className="flex items-center gap-1 text-xs">
+            <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">&lt;</button>
+            <button className="w-6 h-6 flex items-center justify-center rounded bg-[var(--accent-bright)] text-white font-bold">1</button>
+            <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-elevated)] text-[var(--text-primary)] font-bold">2</button>
+            <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-elevated)] text-[var(--text-primary)] font-bold">3</button>
+            <span className="w-6 h-6 flex items-center justify-center text-[var(--text-muted)]">...</span>
+            <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-elevated)] text-[var(--text-primary)] font-bold">48</button>
+            <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-elevated)] text-[var(--text-muted)]">&gt;</button>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Bottom Summary Row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-8">
+        <div className="p-4 rounded-xl flex gap-4" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--text-accent)]" style={{ background: 'var(--bg-elevated)' }}>
+             <HiOutlineBuildingStorefront className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-0.5">TOP SUPPLIER</p>
+            <h4 className="text-sm font-bold text-white mb-0.5">Global Core Ind.</h4>
+            <p className="text-[10px] text-[var(--text-secondary)] font-medium">45% of hardware stock</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl flex gap-4" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--text-accent)]" style={{ background: 'var(--bg-elevated)' }}>
+             <HiOutlineArrowTrendingUp className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-0.5">STOCK TURNOVER</p>
+            <h4 className="text-sm font-bold text-white mb-0.5">8.4x / Month</h4>
+            <p className="text-[10px] text-[var(--success-text)] font-bold">+1.2 from last quarter</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl flex gap-4" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--success-text)]" style={{ background: 'var(--success-bg)' }}>
+             <HiOutlineInboxArrowDown className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-0.5">INBOUND VALUE</p>
+            <h4 className="text-sm font-bold text-white mb-0.5">$2.4M USD</h4>
+            <p className="text-[10px] text-[var(--text-secondary)] font-medium">Processing current orders</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl flex gap-4" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--danger-text)]" style={{ background: 'var(--danger-bg)' }}>
+             <HiOutlineExclamationCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--text-muted)] uppercase mb-0.5">DISCREPANCIES</p>
+            <h4 className="text-sm font-bold text-white mb-0.5">4 Flagged Items</h4>
+            <p className="text-[10px] text-[var(--danger-text)] font-semibold">Audit required immediately</p>
+          </div>
+        </div>
       </div>
 
       {/* Stock Adjustment Modal */}
@@ -431,40 +517,37 @@ const InventoryList = () => {
             <span className="text-lg font-bold" style={{ color: 'var(--accent-bright)' }}>{getPreviewQty()}</span>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setAdjustModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>Cancel</button>
-            <button onClick={submitAdjustment} disabled={adjustSubmitting}
-                    className="px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
-                    style={{ background: 'var(--accent-bright)' }}>
-              {adjustSubmitting ? <><LoadingSpinner size="sm" /> Saving...</> : 'Apply'}
+          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-subtle)] mt-6 py-2">
+            <button type="button" onClick={() => setAdjustModal(null)} className="btn-ghost">Cancel</button>
+            <button onClick={submitAdjustment} disabled={adjustSubmitting} className="btn-primary flex items-center gap-2">
+              {adjustSubmitting ? <><LoadingSpinner size="sm" /> Saving...</> : 'Apply Adjustment'}
             </button>
           </div>
         </div>
       </Modal>
 
       {/* Bulk Update Modal */}
-      <Modal isOpen={bulkModal} onClose={() => setBulkModal(false)} title="Bulk Stock Update" size="lg">
+      <Modal isOpen={bulkModal} onClose={() => setBulkModal(false)} title="Bulk Stock Restock" size="lg">
         <div className="space-y-4">
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Update stock for low/critical items. Only changed values will be saved.</p>
-          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-faint)', maxHeight: '400px' }}>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Quickly update stock for all items currently below their minimum threshold.</p>
+          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-subtle)', maxHeight: '400px' }}>
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 bg-[var(--bg-elevated)] z-10">
                 <tr style={{ background: 'var(--bg-subtle)' }}>
-                  <th className="px-4 py-2 text-left font-semibold" style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>PRODUCT</th>
-                  <th className="px-4 py-2 text-right font-semibold" style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>CURRENT</th>
-                  <th className="px-4 py-2 text-right font-semibold" style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>NEW QTY</th>
+                  <th className="px-4 py-3 text-left font-bold tracking-wider text-[var(--text-muted)] text-[10px] uppercase">PRODUCT SCANNED</th>
+                  <th className="px-4 py-3 text-right font-bold tracking-wider text-[var(--text-muted)] text-[10px] uppercase">CURRENT</th>
+                  <th className="px-4 py-3 text-right font-bold tracking-wider text-[var(--text-muted)] text-[10px] uppercase">NEW QTY RECEIVED</th>
                 </tr>
               </thead>
               <tbody>
                 {lowItems.map(p => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-faint)' }}>
-                    <td className="px-4 py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{p.name}</td>
-                    <td className="px-4 py-2 text-right" style={{ color: 'var(--text-muted)' }}>{p.stock_quantity}</td>
-                    <td className="px-4 py-2 text-right">
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-faint)' }} className="hover:bg-[var(--bg-subtle)]">
+                    <td className="px-4 py-3 font-semibold text-white">{p.name}</td>
+                    <td className="px-4 py-3 text-right font-mono font-bold text-[var(--danger-text)]">{p.stock_quantity}</td>
+                    <td className="px-4 py-3 flex justify-end">
                       <input type="number" min="0" value={bulkUpdates[p.id] ?? p.stock_quantity}
                              onChange={e => setBulkUpdates(u => ({ ...u, [p.id]: parseInt(e.target.value) || 0 }))}
-                             className="w-20 px-2 py-1 text-sm text-right rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+                             className="w-20 px-2 py-1 text-sm text-right font-mono font-bold rounded outline-none focus:ring-1 focus:ring-[var(--accent-bright)]"
                              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }} />
                     </td>
                   </tr>
@@ -472,67 +555,65 @@ const InventoryList = () => {
               </tbody>
             </table>
           </div>
-          {changedCount > 0 && (
-            <p className="text-sm font-medium" style={{ color: 'var(--accent-bright)' }}>{changedCount} item(s) will be updated</p>
-          )}
-          <div className="flex justify-end gap-2">
-            <button onClick={() => setBulkModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>Cancel</button>
+          <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border-subtle)]">
+            <button onClick={() => setBulkModal(false)} className="btn-ghost">Cancel</button>
             <button onClick={submitBulk} disabled={bulkSubmitting || changedCount === 0}
-                    className="px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
-                    style={{ background: 'var(--accent-bright)' }}>
-              {bulkSubmitting ? <><LoadingSpinner size="sm" /> Updating...</> : `Apply ${changedCount} Change(s)`}
+                    className="btn-primary flex items-center gap-2">
+              {bulkSubmitting ? <><LoadingSpinner size="sm" /> Updating...</> : `Confirm ${changedCount} Restock(s)`}
             </button>
           </div>
         </div>
       </Modal>
 
       {/* Add/Edit Item Modal */}
-      <Modal isOpen={itemModal} onClose={() => setItemModal(false)} title={editItemId ? 'Edit Item' : 'Add Item'} size="md">
+      <Modal isOpen={itemModal} onClose={() => setItemModal(false)} title={editItemId ? 'Edit Asset Record' : 'Register New Asset'} size="md">
         <div className="space-y-4">
           <div>
-            <label>Product Name *</label>
-            <input name="name" value={itemForm.name} onChange={onItemChange} placeholder="e.g. Soy Wax 5kg" />
-            {itemErrors.name && <span className="error-msg">{itemErrors.name}</span>}
+            <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Asset Name *</label>
+            <input name="name" value={itemForm.name} onChange={onItemChange} placeholder="e.g. Optical Sensor 60"
+                   className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-white px-3 py-2 rounded focus:border-[var(--accent-bright)] outline-none" />
+            {itemErrors.name && <span className="text-[10px] font-bold text-[var(--danger-text)] mt-1 block">{itemErrors.name}</span>}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label>SKU</label>
-              <input name="sku" value={itemForm.sku} onChange={onItemChange} placeholder="e.g. RAW-001" />
+              <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">SKU/Identifier</label>
+              <input name="sku" value={itemForm.sku} onChange={onItemChange} placeholder="e.g. OP-SENS-56" 
+                     className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-white px-3 py-2 rounded focus:border-[var(--accent-bright)] outline-none font-mono text-sm" />
             </div>
             <div>
-              <label>Category</label>
-              <input name="category" value={itemForm.category} onChange={onItemChange} placeholder="e.g. Raw Materials" />
-            </div>
-          </div>
-          <div>
-            <label>Description</label>
-            <textarea name="description" value={itemForm.description} onChange={onItemChange} rows="2" placeholder="Optional description..." />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label>Unit Price</label>
-              <input name="unit_price" type="number" step="0.01" min="0" value={itemForm.unit_price} onChange={onItemChange} placeholder="0.00" />
-            </div>
-            <div>
-              <label>Cost Price</label>
-              <input name="cost_price" type="number" step="0.01" min="0" value={itemForm.cost_price} onChange={onItemChange} placeholder="0.00" />
+              <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Category</label>
+              <input name="category" value={itemForm.category} onChange={onItemChange} placeholder="e.g. Electronics"
+                     className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-white px-3 py-2 rounded focus:border-[var(--accent-bright)] outline-none" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label>Stock Quantity</label>
-              <input name="stock_quantity" type="number" min="0" value={itemForm.stock_quantity} onChange={onItemChange} placeholder="0" />
+              <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Unit Price</label>
+              <input name="unit_price" type="number" step="0.01" min="0" value={itemForm.unit_price} onChange={onItemChange} placeholder="0.00"
+                     className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-white px-3 py-2 rounded focus:border-[var(--accent-bright)] outline-none font-mono" />
             </div>
             <div>
-              <label>Min Stock Level</label>
-              <input name="min_stock_level" type="number" min="0" value={itemForm.min_stock_level} onChange={onItemChange} placeholder="10" />
+              <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Cost Price</label>
+              <input name="cost_price" type="number" step="0.01" min="0" value={itemForm.cost_price} onChange={onItemChange} placeholder="0.00"
+                     className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-white px-3 py-2 rounded focus:border-[var(--accent-bright)] outline-none font-mono" />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Initial Stock Qty</label>
+              <input name="stock_quantity" type="number" min="0" value={itemForm.stock_quantity} onChange={onItemChange} placeholder="0"
+                     className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-white px-3 py-2 rounded focus:border-[var(--accent-bright)] outline-none font-mono" />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Minimum Safety Stock</label>
+              <input name="min_stock_level" type="number" min="0" value={itemForm.min_stock_level} onChange={onItemChange} placeholder="10"
+                     className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-white px-3 py-2 rounded focus:border-[var(--accent-bright)] outline-none font-mono" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border-subtle)] mt-6 py-2">
             <button onClick={() => setItemModal(false)} className="btn-ghost">Cancel</button>
             <button onClick={saveItem} disabled={itemSaving} className="btn-primary">
-              {itemSaving ? 'Saving...' : editItemId ? 'Update Item' : 'Add Item'}
+              {itemSaving ? 'Saving...' : editItemId ? 'Save Changes' : 'Register Asset'}
             </button>
           </div>
         </div>
@@ -543,9 +624,9 @@ const InventoryList = () => {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Item"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title="Delete Asset Record"
+        message={`Are you sure you want to completely remove "${deleteTarget?.name}"? This action cannot be undone and will affect historical ledgers.`}
+        confirmText="Confirm Deletion"
         danger
         loading={deleting}
       />

@@ -8,12 +8,22 @@ import toast from 'react-hot-toast';
 
 const defaults = {
   company_name: 'IMS Pro',
+  logo: null,
   currency_symbol: '$',
   currency_code: 'USD',
   default_tax_rate: 13,
   low_stock_threshold: 10,
   date_format: 'MM/DD/YYYY',
   timezone: 'UTC',
+};
+
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_SIZE_MB = 2;
+
+const validateFile = (file) => {
+  if (!ALLOWED_TYPES.includes(file.type)) return 'Only JPG, PNG or WebP files allowed';
+  if (file.size > MAX_SIZE_MB * 1024 * 1024) return `File must be under ${MAX_SIZE_MB}MB`;
+  return null;
 };
 
 const SystemSettings = () => {
@@ -67,6 +77,29 @@ const SystemSettings = () => {
     setSettings(s => ({ ...s, [field]: value }));
   };
 
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const error = validateFile(file);
+    if (error) { toast.error(error); return; }
+
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      if (img.width > 400 || img.height > 400) {
+        toast.error('Image must be 400×400px or smaller');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateField('logo', reader.result);
+      };
+      reader.readAsDataURL(file);
+    };
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between">
@@ -92,6 +125,18 @@ const SystemSettings = () => {
       {/* Company Info */}
       <div className="p-6 rounded-2xl space-y-4" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
         <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Company Information</h2>
+        
+        <FormField label="Company Logo" hint="Max 400x400px. JPG, PNG or WebP, up to 2MB">
+          <div className="flex items-center gap-4">
+             {settings.logo ? (
+                <img src={settings.logo} alt="Company Logo" className="w-16 h-16 object-contain rounded border border-[var(--border-subtle)] bg-white/5 p-1" />
+             ) : (
+                <div className="w-16 h-16 rounded border border-[var(--border-subtle)] border-dashed flex items-center justify-center text-[var(--text-muted)] bg-black/10 text-xs">No Logo</div>
+             )}
+             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleLogoUpload} className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--accent-glow)] file:text-[var(--accent-bright)] hover:file:bg-[var(--bg-subtle)] text-[var(--text-primary)]" />
+          </div>
+        </FormField>
+
         <FormField label="Company Name" required>
           <FormInput value={settings.company_name} onChange={e => updateField('company_name', e.target.value)} placeholder="Your company name" />
         </FormField>

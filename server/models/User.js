@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 class User {
   static async findByEmail(email) {
-    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await pool.query('SELECT id, name, email, password, role, is_active, email_verified FROM users WHERE email = ?', [email]);
     return rows[0] || null;
   }
 
@@ -15,7 +15,7 @@ class User {
   }
 
   static async create({ name, email, password, role = 'staff' }) {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
     const [result] = await pool.query(
       'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
       [name, email, hashedPassword, role]
@@ -50,7 +50,7 @@ class User {
   }
 
   static async updatePassword(id, newPassword) {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
     await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
   }
 

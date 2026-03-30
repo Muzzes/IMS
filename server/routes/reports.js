@@ -7,6 +7,8 @@ const reportController = require('../controllers/reportController');
 const router = express.Router();
 
 router.use(auth);
+const requireVerified = require('../middleware/requireVerified');
+router.use(requireVerified);
 router.use(workspaceScope);
 
 router.get('/dashboard',                  reportController.getDashboardStats);

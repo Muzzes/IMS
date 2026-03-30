@@ -1,3 +1,5 @@
+import { containsSQLInjection } from './sanitize';
+
 export const rules = {
   required: (v) => (!v && v !== 0) || !String(v).trim() ? 'This field is required' : null,
   minLength: (n) => (v) => v && v.length < n ? `Minimum ${n} characters` : null,
@@ -11,6 +13,17 @@ export const rules = {
     const parts = String(v).split('.');
     return parts[1]?.length > n ? `Max ${n} decimal places` : null;
   },
+  noSQLInjection: (v) => containsSQLInjection(v) ? 'Invalid characters detected' : null,
+  passwordStrength: (v) => {
+    if (!v) return null;
+    if (v.length < 8) return 'Password must be at least 8 characters';
+    if (!/(?=.*[a-z])/.test(v)) return 'Must contain lowercase';
+    if (!/(?=.*[A-Z])/.test(v)) return 'Must contain uppercase';
+    if (!/(?=.*[0-9])/.test(v)) return 'Must contain number';
+    if (!/(?=.*[^a-zA-Z0-9])/.test(v)) return 'Must contain special character';
+    if (/\s/.test(v)) return 'Must not contain spaces';
+    return null;
+  }
 };
 
 const validate = (schema) => (data) => {

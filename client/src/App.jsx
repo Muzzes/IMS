@@ -10,12 +10,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Login from './pages/auth/Login';
+import VerifyEmail from './pages/auth/VerifyEmail';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import Dashboard from './pages/dashboard/Dashboard';
 import Products from './pages/products/Products';
 import Suppliers from './pages/suppliers/Suppliers';
 import Purchases from './pages/purchases/Purchases';
 import Sales from './pages/sales/Sales';
-import Billing from './pages/billing/Billing';
 import Notifications from './pages/notifications/Notifications';
 import Reports from './pages/reports/Reports';
 import WorkspaceList from './pages/settings/workspaces/WorkspaceList';
@@ -24,6 +26,8 @@ import UsersList from './pages/settings/users/UsersList';
 import RawMaterials from './pages/materials/RawMaterials';
 import InventoryList from './pages/inventory/InventoryList';
 import SystemSettings from './pages/settings/SystemSettings';
+import NotificationPreferences from './pages/settings/NotificationPreferences';
+import EmailLogs from './pages/settings/EmailLogs';
 
 // Error Pages
 import ForbiddenPage from './pages/errors/ForbiddenPage';
@@ -50,6 +54,9 @@ const App = () => {
             <Routes>
               {/* Public */}
               <Route path="/login" element={<Login />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/403" element={<ForbiddenPage />} />
               <Route path="/404" element={<NotFoundPage />} />
 
@@ -67,7 +74,6 @@ const App = () => {
                 <Route path="suppliers" element={<ProtectedRoute roles={['admin', 'staff']}><Suppliers /></ProtectedRoute>} />
                 <Route path="purchases" element={<ProtectedRoute roles={['admin', 'staff']}><Purchases /></ProtectedRoute>} />
                 <Route path="sales" element={<ProtectedRoute roles={['admin', 'staff']}><Sales /></ProtectedRoute>} />
-                <Route path="billing" element={<ProtectedRoute roles={['admin', 'staff']}><Billing /></ProtectedRoute>} />
                 <Route path="reports" element={<ProtectedRoute roles={['admin', 'staff']}><Reports /></ProtectedRoute>} />
 
                 {/* Admin only Settings */}
@@ -76,6 +82,8 @@ const App = () => {
                 <Route path="settings/workspaces/:id" element={<ProtectedRoute roles={['admin']}><WorkspaceDetail /></ProtectedRoute>} />
                 <Route path="settings/users" element={<ProtectedRoute roles={['admin']}><UsersList /></ProtectedRoute>} />
                 <Route path="settings/system" element={<ProtectedRoute roles={['admin']}><SystemSettings /></ProtectedRoute>} />
+                <Route path="settings/notifications" element={<NotificationPreferences />} />
+                <Route path="settings/email-logs" element={<ProtectedRoute roles={['admin']}><EmailLogs /></ProtectedRoute>} />
               </Route>
 
               {/* Catch all unmatched routes → 404 */}

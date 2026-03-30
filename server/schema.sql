@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   purchase_number VARCHAR(50) NOT NULL,
   supplier_id     INT,
   total_amount    DECIMAL(12,2) NOT NULL DEFAULT 0,
-  status          ENUM('draft','ordered','received','cancelled') NOT NULL DEFAULT 'draft',
+  status          ENUM('draft','pending','delivering','delivered','received','cancelled') NOT NULL DEFAULT 'draft',
   notes           TEXT,
   order_date      DATE,
   received_date   DATE,
