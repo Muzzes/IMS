@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const validate = require('../middleware/validate');
+const { validate } = require('../middleware/validate');
 const auth = require('../middleware/auth');
 const workspaceScope = require('../middleware/workspaceScope');
 const auditLog = require('../middleware/auditLog');
